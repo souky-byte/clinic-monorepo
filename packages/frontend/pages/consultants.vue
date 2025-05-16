@@ -64,13 +64,13 @@
             </template>
           </Column>
 
-          <Column field="lastActive" header="Poslední aktivita" sortable data-type="date">
+          <Column field="lastActive" header="Poslední aktivita" sortable :dataType="'date'">
             <template #body="{ data }">
               {{ formatDate(data.lastActive) }}
             </template>
           </Column>
 
-          <Column field="createdAt" header="Vytvořen" sortable data-type="date">
+          <Column field="createdAt" header="Vytvořen" sortable :dataType="'date'">
             <template #body="{ data }">
               {{ formatDate(data.createdAt) }}
             </template>
@@ -187,7 +187,6 @@ import Dropdown from 'primevue/dropdown';
 import Dialog from 'primevue/dialog';
 import { useDebounceFn } from '@vueuse/core';
 import Password from 'primevue/password';
-import Message from 'primevue/message';
 import Divider from 'primevue/divider';
 
 import { useApiService } from '~/composables/useApiService';
@@ -210,7 +209,6 @@ const lazyParams = reactive({
   sortField: ConsultantSortBy.CREATED_AT,
   sortOrder: -1 as (1 | -1 | undefined | null),
   globalFilter: null as string | null,
-  statusFilter: null as UserStatus | null,
 });
 
 const globalFilterValue = ref<string | null>(null);
@@ -226,8 +224,13 @@ const loadConsultants = async () => {
       page: lazyParams.page,
       limit: lazyParams.rows,
       sortBy: lazyParams.sortField || ConsultantSortBy.CREATED_AT,
-      sortOrder: lazyParams.sortOrder === 1 ? 'asc' : 'desc',
     };
+
+    if (lazyParams.sortOrder === 1) {
+      apiParams.sortOrder = 'asc';
+    } else if (lazyParams.sortOrder === -1) {
+      apiParams.sortOrder = 'desc';
+    }
 
     if (lazyParams.globalFilter && lazyParams.globalFilter.trim() !== '') {
       apiParams.search = lazyParams.globalFilter.trim();
@@ -237,7 +240,14 @@ const loadConsultants = async () => {
       apiParams.status = statusFilterValue.value;
     }
 
-    const response = await $api.get<PaginatedConsultantsResult>('/consultants', { params: apiParams });
+    const finalApiParams: Record<string, any> = {};
+    for (const key in apiParams) {
+      if (apiParams[key] !== undefined) {
+        finalApiParams[key] = apiParams[key];
+      }
+    }
+
+    const response = await $api.get<PaginatedConsultantsResult>('/consultants', { params: finalApiParams });
     consultants.value = response.data.data;
     totalRecords.value = response.data.total;
 
