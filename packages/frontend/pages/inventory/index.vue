@@ -169,6 +169,7 @@ import Vue3EasyDataTable from 'vue3-easy-data-table';
 import 'vue3-easy-data-table/dist/style.css';
 import { useAuthStore } from '~/stores/auth';
 import { useNotificationStore } from '~/stores/notification';
+import { useApiService } from '~/composables/useApiService';
 // Removed Radix-Vue Dialog imports
 
 // PrimeVue components (ensure these are auto-imported or add explicit imports if needed)

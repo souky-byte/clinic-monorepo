@@ -136,6 +136,9 @@ import Textarea from 'primevue/textarea';
 import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
 
+import { useApiService } from '~/composables/useApiService';
+import { useNotificationStore } from '~/stores/notification';
+
 // Stávající interface pro zobrazení v tabulce (může být shodný s AppointmentTypeResponse)
 interface AppointmentType {
   id: number;

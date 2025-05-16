@@ -80,13 +80,12 @@ const PackageIcon = (props: IconProps) => h('svg', { ...props, xmlns: 'http://ww
 
 const navItems = [
   { path: '/dashboard', name: 'Dashboard', icon: DashboardIcon, adminOnly: false },
-  { path: '/inventory', name: 'Sklad', icon: InventoryIcon, adminOnly: false },
+  { path: '/inventory', name: 'Inventář', icon: InventoryIcon, adminOnly: false },
   { path: '/patients', name: 'Pacienti', icon: PatientsIcon, adminOnly: false },
   { path: '/appointments', name: 'Schůzky', icon: AppointmentsIcon, adminOnly: false },
   { path: '/appointment-types', name: 'Typy schůzek', icon: AppointmentTypesIcon, adminOnly: true },
   { path: '/audit-log', name: 'Audit log', icon: AuditLogIcon, adminOnly: true },
   { path: '/consultants', name: 'Konzultanti', icon: ConsultantsIcon, adminOnly: true },
-  { path: '/packages', name: 'Packages', icon: PackageIcon, adminOnly: false },
 ];
 
 const filteredNavItems = computed(() => {
