@@ -1,0 +1,19 @@
+{
+  "name": "nutrition-dashboard-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build:frontend": "pnpm --filter frontend build",
+    "start:frontend": "pnpm --filter frontend start",
+    "dev:backend": "pnpm --filter backend start:dev",
+    "build:backend": "pnpm --filter backend build",
+    "start:backend": "pnpm --filter backend start:prod",
+    "test:backend": "pnpm --filter backend test",
+    "test:e2e:backend": "pnpm --filter backend test:e2e"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "typescript": "^5",
+    "pnpm": "^8.0.0"
+  }
+} 
