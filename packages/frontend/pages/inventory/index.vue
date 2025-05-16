@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h1>Skladové položky</h1>
+      <h1 class="text-2xl font-semibold text-gray-900">Skladové položky</h1>
       
       <Button label="Přidat položku" icon="pi pi-plus" @click="openNewProductDialog" />
 
@@ -22,7 +22,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="quantity" class="block font-bold mb-2">Množství</label>
-                    <InputNumber id="quantity" v-model="product.quantity" integeronly min="0" required :invalid="submitted && product.quantity == null" fluid />
+                    <InputNumber id="quantity" v-model="product.quantity" integeronly :min="0" required :invalid="submitted && product.quantity == null" fluid />
                     <small v-if="submitted && product.quantity == null" class="p-error">Množství je povinné.</small>
                 </div>
                 <div>
@@ -69,55 +69,66 @@
         </template>
     </Dialog>
 
-    <div class="card">
-      <Vue3EasyDataTable
-        :headers="headers"
-        :items="items"
-        :loading="loading"
-        :server-items-length="serverItemsLength"
-        v-model:server-options="serverOptions"
-        table-class-name="table"
-        theme-color="#1f2937" 
-        buttons-pagination
-      >
-        <template #item-priceWithoutVAT="item">
-          {{ formatPrice(item.priceWithoutVAT) }}
-        </template>
-        <template #item-vatRate="item">
-          {{ item.vatRate ? parseFloat(item.vatRate).toFixed(0) + ' %' : '-' }}
-        </template>
-        <template #item-priceWithVAT="item">
-          {{ formatPrice(item.priceWithVAT) }}
-        </template>
-        <template #item-createdAt="item">
-          {{ formatDate(item.createdAt) }}
-        </template>
-        <template #item-updatedAt="item">
-          {{ formatDate(item.updatedAt) }}
-        </template>
+    <Card>
+      <template #content>
+        <DataTable 
+          :value="items" 
+          :loading="loading" 
+          lazy 
+          paginator 
+          :rows="serverOptions.rows" 
+          :first="firstPageRecord" 
+          :total-records="serverItemsLength" 
+          @page="onPage" 
+          @sort="onSort" 
+          data-key="id"
+          paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          :rows-per-page-options="[10, 25, 50, 100]"
+          current-page-report-template="Zobrazeno {first} až {last} z celkových {totalRecords} položek"
+          responsive-layout="scroll" 
+          class="p-datatable-sm" 
+          stripedRows
+          :showGridlines="false"
+          size="small"
+          tableStyle="min-width: 50rem"
+          sort-mode="single"
+        >
+          <template #empty>Nebyly nalezeny žádné skladové položky.</template>
+          <template #loading>Načítání skladových položek...</template>
 
-        <template #item-actions="item">
-          <div class="flex space-x-2">
-            <button 
-              @click="openRestockModal(item)" 
-              class="text-blue-600 hover:text-blue-800 p-1"
-              title="Naskladnit"
-            >
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
-            </button>
-            <button 
-              v-if="isAdmin"
-              @click="openDeleteModal(item)"
-              class="text-red-600 hover:text-red-800 p-1"
-              title="Smazat"
-            >
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
-            <!-- TODO: Add edit button/modal later -->
-          </div>
-        </template>
-      </Vue3EasyDataTable>
-    </div>
+          <Column field="name" header="Název" sortable style="min-width: 12rem;"></Column>
+          <Column field="description" header="Popis" style="min-width: 15rem;">
+            <template #body="{data}">
+              <span class="truncate block" style="max-width: 20ch;" :title="data.description">{{ data.description || '-' }}</span>
+            </template>
+          </Column>
+          <Column field="quantity" header="Množství" sortable style="min-width: 8rem; text-align: right;"></Column>
+          <Column field="priceWithoutVAT" header="Cena bez DPH" sortable style="min-width: 10rem; text-align: right;">
+            <template #body="{data}">{{ formatPrice(data.priceWithoutVAT) }}</template>
+          </Column>
+          <!-- <Column field="vatRate" header="Sazba DPH" sortable style="min-width: 8rem; text-align: center;">
+            <template #body="{data}">{{ data.vatRate ? parseFloat(String(data.vatRate)).toFixed(0) + ' %' : '-' }}</template>
+          </Column> -->
+          <Column field="priceWithVAT" header="Cena s DPH" sortable style="min-width: 10rem; text-align: right;">
+            <template #body="{data}">{{ formatPrice(data.priceWithVAT) }}</template>
+          </Column>
+          <!-- <Column field="createdAt" header="Vytvořeno" sortable style="min-width: 10rem;">
+            <template #body="{data}">{{ formatDate(data.createdAt) }}</template>
+          </Column>
+          <Column field="updatedAt" header="Aktualizováno" sortable style="min-width: 10rem;">
+            <template #body="{data}">{{ formatDate(data.updatedAt) }}</template>
+          </Column> -->
+          <Column header="Akce" style="min-width: 8rem;" frozen alignFrozen="right">
+            <template #body="{data}">
+              <div class="flex gap-2 justify-center">
+                <Button icon="pi pi-plus-circle" outlined rounded severity="success" @click="openRestockModal(data)" v-tooltip.top="'Naskladnit'" />
+                <Button v-if="isAdmin" icon="pi pi-trash" outlined rounded severity="danger" @click="openDeleteModal(data)" v-tooltip.top="'Smazat'" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </Card>
     
     <!-- Restock Item Modal -->
     <dialog-modal
@@ -163,24 +174,23 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed } from 'vue';
-import type { Header, Item, ServerOptions, SortType } from 'vue3-easy-data-table';
-// @ts-ignore
-import Vue3EasyDataTable from 'vue3-easy-data-table';
-import 'vue3-easy-data-table/dist/style.css';
 import { useAuthStore } from '~/stores/auth';
 import { useNotificationStore } from '~/stores/notification';
 import { useApiService } from '~/composables/useApiService';
-// Removed Radix-Vue Dialog imports
 
 // PrimeVue components (ensure these are auto-imported or add explicit imports if needed)
-// import Dialog from 'primevue/dialog';
-// import Button from 'primevue/button';
-// import InputText from 'primevue/inputtext';
-// import Textarea from 'primevue/textarea';
-// import InputNumber from 'primevue/inputnumber';
-// import SelectButton from 'primevue/selectbutton';
-// import Checkbox from 'primevue/checkbox';
-// import MultiSelect from 'primevue/multiselect';
+import DataTable, { type DataTablePageEvent, type DataTableSortEvent } from 'primevue/datatable';
+import Column from 'primevue/column';
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import InputNumber from 'primevue/inputnumber';
+import SelectButton from 'primevue/selectbutton';
+import Checkbox from 'primevue/checkbox';
+import MultiSelect from 'primevue/multiselect';
+import Tooltip from 'primevue/tooltip';
+import Card from 'primevue/card';
 
 
 const { $api } = useApiService();
@@ -228,8 +238,8 @@ const product = ref<ProductFormData>({
   description: null,
   quantity: null,
   priceWithoutVAT: null,
-  vatRate: 21, // Default VAT rate
-  priceWithVAT: null, // Will be calculated
+  vatRate: 21, // Default VAT rate as a number
+  priceWithVAT: null, 
   isVisible: true,
   visibleToConsultantIds: []
 });
@@ -314,9 +324,7 @@ const saveNewProduct = async () => {
             quantity: Number(currentProduct.quantity), 
             priceWithoutVAT: Number(currentProduct.priceWithoutVAT),
             vatRate: Number(currentProduct.vatRate),
-            // Map product.isVisible (from form) to visibleToAll (DTO field)
             visibleToAll: currentProduct.isVisible, 
-            // priceWithVAT should NOT be sent as per server error
         };
 
         // Conditionally add visibleToSpecificConsultantIds based on visibleToAll
@@ -343,25 +351,44 @@ const saveNewProduct = async () => {
 
 
 // Table headers (stávající)
-const headers: Header[] = [
-  { text: "Název", value: "name", sortable: true },
-  { text: "Popis", value: "description" },
-  { text: "Množství", value: "quantity", sortable: true },
-  { text: "Cena bez DPH", value: "priceWithoutVAT", sortable: true },
-  { text: "Sazba DPH", value: "vatRate", sortable: true },
-  { text: "Cena s DPH", value: "priceWithVAT", sortable: true },
-  { text: "Akce", value: "actions", width: 120 },
-];
+// const headers: Header[] = [
+//   { text: "Název", value: "name", sortable: true },
+//   { text: "Popis", value: "description" },
+//   { text: "Množství", value: "quantity", sortable: true },
+//   { text: "Cena bez DPH", value: "priceWithoutVAT", sortable: true },
+//   { text: "Sazba DPH", value: "vatRate", sortable: true },
+//   { text: "Cena s DPH", value: "priceWithVAT", sortable: true },
+//   { text: "Akce", value: "actions", width: 120 },
+// ];
 
 const items = ref<InventoryItem[]>([]);
 const loading = ref(true);
 const serverItemsLength = ref(0);
-const serverOptions = ref<ServerOptions>({
-  page: 1,
-  rowsPerPage: 10,
-  sortBy: 'createdAt',
-  sortType: 'desc',
+
+// ServerOptions for PrimeVue DataTable
+// Note: PrimeVue page is 0-indexed, rowsPerPage is just rows
+// sortBy is sortField, sortType is sortOrder (1 for asc, -1 for desc)
+const serverOptions = ref({
+  page: 0, // PrimeVue page is 0-indexed
+  rows: 10, // Corresponds to rowsPerPage
+  sortField: 'createdAt',
+  sortOrder: -1, // -1 for desc, 1 for asc
 });
+
+const firstPageRecord = computed(() => serverOptions.value.page * serverOptions.value.rows);
+
+// Event handlers for DataTable
+const onPage = (event: DataTablePageEvent) => {
+  serverOptions.value.page = event.page || 0;
+  serverOptions.value.rows = event.rows || 10;
+  loadFromServer();
+};
+
+const onSort = (event: DataTableSortEvent) => {
+  serverOptions.value.sortField = String(event.sortField || 'createdAt');
+  serverOptions.value.sortOrder = event.sortOrder || -1;
+  loadFromServer();
+};
 
 // Original functions for modals - ensure they are present
 const selectedItem = ref<InventoryItem | null>(null); // Was potentially removed or commented out
@@ -437,14 +464,12 @@ const addItem = () => {};
 async function loadFromServer() {
   loading.value = true;
   try {
-    const params = {
-      page: serverOptions.value.page,
-      limit: serverOptions.value.rowsPerPage,
-      sortBy: serverOptions.value.sortBy,
-      sortOrder: serverOptions.value.sortType,
-      // Add other filters if you have them (e.g., searchQuery.value)
+    const params: Record<string, any> = {
+      page: serverOptions.value.page + 1, // API is 1-indexed for page
+      limit: serverOptions.value.rows,
+      sortBy: serverOptions.value.sortField,
+      sortOrder: serverOptions.value.sortOrder === 1 ? 'asc' : 'desc',
     };
-    // if (searchQuery.value) params.search = searchQuery.value;
 
     const response = await $api.get<{ data: InventoryItem[]; meta: { total: number } }>('/inventory', { params });
     items.value = response.data.data.map(item => ({
@@ -489,30 +514,15 @@ function formatDate(dateString: string | undefined | null): string {
 </script>
 
 <style scoped>
-.table :deep(th .easy-data-table__header-text) {
-  font-weight: 600 !important;
-  color: rgb(55 65 81) !important;
-  text-align: left;
+/* Vue3EasyDataTable styles removed */
+/* Add any custom styles or overrides for PrimeVue components here if needed */
+/* For example, to ensure DataTable fits well */
+:deep(.p-datatable) {
+  border-radius: var(--p-border-radius, 6px); /* Use PrimeVue variable or your own */
 }
 
-.table :deep(thead th) {
-  background-color: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
-  padding-top: 12px !important;
-  padding-bottom: 12px !important;
+:deep(.p-paginator) {
+  border-bottom-left-radius: var(--p-border-radius, 6px);
+  border-bottom-right-radius: var(--p-border-radius, 6px);
 }
-
-.table :deep(tbody td) {
-  padding: 12px 10px !important;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.table :deep(tbody tr:nth-child(even)) {
-  background-color: #f9fafb;
-}
-
-.table :deep(tbody tr:hover) {
-  background-color: #f0f9ff;
-}
-
 </style>

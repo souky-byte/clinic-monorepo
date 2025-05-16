@@ -160,6 +160,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useApiService } from '~/composables/useApiService';
+import { useNotificationStore } from '~/stores/notification';
+import { useAuthStore } from '~/stores/auth';
 // PrimeVue components will be auto-imported by Nuxt module
 
 // Assuming useApiService is globally available or auto-imported

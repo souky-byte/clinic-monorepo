@@ -128,6 +128,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useApiService } from '~/composables/useApiService';
+import { useNotificationStore } from '~/stores/notification';
+import { useAuthStore } from '~/stores/auth';
 
 // Interfaces based on provided Swagger and sample response
 interface UserLite { // For consultant

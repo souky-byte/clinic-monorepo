@@ -1,39 +1,61 @@
 <template>
   <aside 
-    class="fixed inset-y-0 left-0 z-40 w-64 bg-gray-800 text-white transform transition-transform duration-300 lg:translate-x-0"
-    :class="{ '-translate-x-full': !isOpen }"
+    class="fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 border-r border-gray-200 text-slate-700 transform transition-all duration-300 ease-in-out"
+    :class="{ 'w-64': isOpen, 'w-20': !isOpen }"
   >
-    <div class="h-16 flex items-center justify-center border-b border-gray-700">
-      <h2 class="text-xl font-bold">Menu</h2>
+    <div 
+      class="h-16 flex items-center shrink-0 px-4 border-b border-gray-200 transition-all duration-300 ease-in-out"
+      :class="{ 'justify-center': !isOpen, 'justify-start': isOpen }"
+    >
+      <span v-if="isOpen" class="text-xl font-semibold text-slate-800">Klinika</span>
+      <span v-else class="text-xl font-semibold text-slate-800"><i class="pi pi-th-large"></i></span>
+      <!-- Simplified header: Shows 'Klinika' when open, 'pi-th-large' icon when closed -->
     </div>
-    <NavigationMenuRoot class="py-4 w-full">
-      <NavigationMenuList class="space-y-1 flex flex-col w-full">
-        <NavigationMenuItem v-for="item in filteredNavItems" :key="item.path" class="w-full">
-          <NavigationMenuLink 
-            class="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 w-full"
-            :class="{ 'bg-gray-700 text-white': isActive(item.path) }"
-            as-child
+    
+    <nav class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
+      <Menu :model="menuModelRef" class="w-full">
+        <template #item="{ item, props: itemProps }">
+          <NuxtLink 
+            :to="item.to" 
+            v-tooltip.right="!isOpen ? item.label : null" 
+            class="flex items-center p-3 rounded-md transition-colors duration-150 ease-in-out"
+            :class="[
+              isActive(item.to) 
+                ? 'bg-sky-100 text-sky-700 font-medium' 
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-700',
+              isOpen ? 'justify-start' : 'justify-center'
+            ]"
           >
-            <NuxtLink :to="item.path" class="flex items-center w-full">
-              <component :is="item.icon" class="h-5 w-5 mr-3 shrink-0" />
-              <span>{{ item.name }}</span>
-            </NuxtLink>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenuRoot>
+            <i :class="[item.icon, 'text-lg']" />
+            <span 
+              v-if="isOpen"
+              class="ml-3 text-sm transition-opacity duration-150 ease-in-out"
+              :class="{ 'opacity-100': isOpen, 'opacity-0 h-0': !isOpen }"
+            >
+              {{ item.label }}
+            </span>
+          </NuxtLink>
+        </template>
+      </Menu>
+    </nav>
+
   </aside>
 </template>
 
 <script setup lang="ts">
-import { h, computed } from 'vue';
-import { useAuthStore } from '~/stores/auth';
+import { h, computed, ref, watchEffect } from 'vue';
+// Remove Radix imports if no longer used after p-menu integration
+/*
 import {
   NavigationMenuRoot,
   NavigationMenuList,
   NavigationMenuItem,
   NavigationMenuLink,
 } from 'radix-vue';
+*/
+import { useAuthStore } from '~/stores/auth';
+import Menu from 'primevue/menu';
+import Tooltip from 'primevue/tooltip';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -43,49 +65,18 @@ const authStore = useAuthStore();
 const isAdmin = computed(() => authStore.isAdmin);
 const route = useRoute();
 
-interface IconProps {
-  class: string;
-}
-
-// Definice ikon jako funkční komponenty
-const DashboardIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M3 12l2-2m0 0l7-7 7 7m-7-7v14" })
-]);
-
-const InventoryIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" })
-]);
-
-const PatientsIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" })
-]);
-
-const AppointmentsIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" })
-]);
-
-const AppointmentTypesIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" })
-]);
-
-const AuditLogIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" })
-]);
-
-const ConsultantsIcon = () => h('svg', { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", class: "h-5 w-5" }, [
-  h('path', { 'stroke-linecap': "round", 'stroke-linejoin': "round", 'stroke-width': "2", d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 016-6h6a6 6 0 016 6v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" })
-]);
-
-const PackageIcon = (props: IconProps) => h('svg', { ...props, xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', strokeWidth: '1.5', stroke: 'currentColor', innerHTML: '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10.5 8.25h3M12 3v5.25m0 0l-1.125-1.125M12 8.25l1.125-1.125M3.75 7.5h16.5c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75C3.129 5.25 2.625 5.754 2.625 6.375v0.001c0 .621.504 1.125 1.125 1.125z" />'});
+// Icons will be replaced by PrimeIcons in menuModel
+// Keep navItems structure for now, will transform to PrimeVue menu model
+// Example PrimeIcons: pi-home, pi-box, pi-users, pi-calendar, pi-file-edit, pi-history, pi-id-card
 
 const navItems = [
-  { path: '/dashboard', name: 'Dashboard', icon: DashboardIcon, adminOnly: false },
-  { path: '/inventory', name: 'Inventář', icon: InventoryIcon, adminOnly: false },
-  { path: '/patients', name: 'Pacienti', icon: PatientsIcon, adminOnly: false },
-  { path: '/appointments', name: 'Schůzky', icon: AppointmentsIcon, adminOnly: false },
-  { path: '/appointment-types', name: 'Typy schůzek', icon: AppointmentTypesIcon, adminOnly: true },
-  { path: '/audit-log', name: 'Audit log', icon: AuditLogIcon, adminOnly: true },
-  { path: '/consultants', name: 'Konzultanti', icon: ConsultantsIcon, adminOnly: true },
+  { path: '/dashboard', name: 'Dashboard', iconName: 'pi pi-home', adminOnly: false },
+  { path: '/inventory', name: 'Inventář', iconName: 'pi pi-box', adminOnly: false },
+  { path: '/patients', name: 'Pacienti', iconName: 'pi pi-users', adminOnly: false },
+  { path: '/appointments', name: 'Schůzky', iconName: 'pi pi-calendar', adminOnly: false },
+  { path: '/appointment-types', name: 'Typy schůzek', iconName: 'pi pi-file-edit', adminOnly: true },
+  { path: '/audit-log', name: 'Audit log', iconName: 'pi pi-history', adminOnly: true },
+  { path: '/consultants', name: 'Konzultanti', iconName: 'pi pi-id-card', adminOnly: true },
 ];
 
 const filteredNavItems = computed(() => {
@@ -95,7 +86,57 @@ const filteredNavItems = computed(() => {
   return navItems.filter(item => !item.adminOnly);
 });
 
+const menuModelRef = ref<any[]>([]);
+
+watchEffect(() => {
+  menuModelRef.value = filteredNavItems.value.map(item => ({
+    label: item.name,
+    icon: item.iconName,
+    to: item.path,
+    // We'll use template to handle active state and NuxtLink
+  }));
+});
+
+// isActive function will be used inside the template for custom active class logic
 function isActive(path: string) {
-  return route.path.startsWith(path);
+  // Exact match for dashboard, startsWith for others if they have sub-routes
+  if (path === '/dashboard') return route.path === path;
+  return route.path.startsWith(path) && path !== '/'; // ensure path is not just root
 }
+
+// TODO: Define menuModel for PrimeVue <p-menu> based on filteredNavItems
+// TODO: Import and integrate <p-menu>
+
 </script>
+
+<style scoped>
+/* Scoped styles for fine-tuning */
+/* Ensure icons in collapsed state are centered if needed */
+.w-20 .pi {
+  /* font-size: 1.5rem; /* Example if icons need to be larger when collapsed */
+}
+
+/* Remove default PrimeVue Menu padding/styles that we don't want */
+:deep(.p-menu) {
+  background: transparent;
+  border: none;
+  width: 100%;
+  padding: 0;
+}
+
+:deep(.p-menu .p-menuitem > .p-menuitem-content) {
+  background: transparent;
+  transition: background-color 0.2s, color 0.2s;
+  /* Removed margin and border-radius, will be on NuxtLink directly */
+  padding: 0; /* Reset padding as NuxtLink will handle it */
+}
+
+:deep(.p-menu .p-menuitem > .p-menuitem-content .p-menuitem-link) {
+  padding: 0; /* Reset padding as NuxtLink will handle it */
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Custom active and hover states will be applied via template classes on NuxtLink */
+</style>
