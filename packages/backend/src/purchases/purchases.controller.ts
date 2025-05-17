@@ -8,7 +8,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Purchase } from './entities/purchase.entity';
 import { PurchaseQueryDto } from './dto/purchase-query.dto';
+import { PatientPurchaseDto } from './dto/patient-purchase.dto';
+import { ApiOkResponse, ApiOperation, ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Purchases')
+@ApiBearerAuth()
 @Controller('purchases')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class PurchasesController {
@@ -19,6 +23,14 @@ export class PurchasesController {
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createPurchaseDto: CreatePurchaseDto, @GetUser() currentUser: User): Promise<Purchase> {
     return this.purchasesService.create(createPurchaseDto, currentUser);
+  }
+
+  @Get('me')
+  @Roles(UserRole.PATIENT)
+  @ApiOperation({ summary: 'Get all purchases for the currently logged-in patient (includes items from appointments)' })
+  @ApiOkResponse({ description: 'Successfully retrieved patient\'s purchases.', type: [PatientPurchaseDto] })
+  findMyPurchases(@GetUser() currentUser: User): Promise<PatientPurchaseDto[]> {
+    return this.purchasesService.findMyPurchases(currentUser);
   }
 
   @Get()

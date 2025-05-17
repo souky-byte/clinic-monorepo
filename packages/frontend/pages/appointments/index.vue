@@ -2,7 +2,16 @@
   <div class="p-4 md:p-6 space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h1 class="text-2xl font-semibold text-gray-900">Schůzky</h1>
-      <Button label="Nová schůzka" icon="pi pi-plus" @click="openNewAppointmentDialog" />
+      <div class="flex items-center gap-2">
+        <Button label="Naplánovat schůzku" icon="pi pi-plus" @click="openNewAppointmentDialog" />
+        <Button 
+          label="Začít schůzku" 
+          icon="pi pi-play" 
+          @click="startNewAdHocAppointment" 
+          v-tooltip.bottom="'Vytvořit novou schůzku a rovnou ji začít'"
+          severity="success"
+        />
+      </div>
     </div>
     
     <Card>
@@ -124,11 +133,21 @@
               <Tag :value="getStatusText(slotProps.data.status)" :severity="getStatusSeverity(slotProps.data.status)" rounded />
             </template>
           </Column>
-          <Column field="actions" header="Akce" :exportable="false" style="min-width:8rem" :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
+          <Column field="actions" header="Akce" :exportable="false" style="min-width:10rem" :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
             <template #body="slotProps">
               <NuxtLink :to="`/appointments/${slotProps.data.id}`">
-                <Button icon="pi pi-eye" text rounded aria-label="Detail" />
-                </NuxtLink>
+                <Button icon="pi pi-eye" text rounded aria-label="Detail" v-tooltip.top="'Zobrazit detail'" />
+              </NuxtLink>
+              <Button 
+                v-if="isAppointmentStartable(slotProps.data.status)"
+                icon="pi pi-play" 
+                text 
+                rounded 
+                severity="success"
+                aria-label="Začít schůzku"
+                v-tooltip.top="'Začít schůzku'"
+                @click="navigateTo(`/appointments/${slotProps.data.id}/start`)" 
+              />
               <!-- TODO: Edit/Cancel buttons with PrimeVue and role checks -->
             </template>
           </Column>
@@ -191,11 +210,21 @@
               <Tag :value="getStatusText(slotProps.data.status)" :severity="getStatusSeverity(slotProps.data.status)" rounded />
             </template>
           </Column>
-          <Column field="actions" header="Akce" :exportable="false" style="min-width:8rem" :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
+          <Column field="actions" header="Akce" :exportable="false" style="min-width:10rem" :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
             <template #body="slotProps">
               <NuxtLink :to="`/appointments/${slotProps.data.id}`">
-                <Button icon="pi pi-eye" text rounded aria-label="Detail" />
-                  </NuxtLink>
+                <Button icon="pi pi-eye" text rounded aria-label="Detail" v-tooltip.top="'Zobrazit detail'" />
+              </NuxtLink>
+              <Button 
+                v-if="isAppointmentStartable(slotProps.data.status)"
+                icon="pi pi-play" 
+                text 
+                rounded 
+                severity="success"
+                aria-label="Začít schůzku"
+                v-tooltip.top="'Začít schůzku'"
+                @click="navigateTo(`/appointments/${slotProps.data.id}/start`)" 
+              />
               <!-- TODO: Edit/Cancel buttons with PrimeVue and role checks -->
             </template>
           </Column>
@@ -308,6 +337,7 @@ import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
 import Calendar from 'primevue/calendar';
 import Textarea from 'primevue/textarea';
+import Tooltip from 'primevue/tooltip';
 // import Calendar from 'primevue/calendar'; // For later calendar view implementation
 
 definePageMeta({
@@ -546,6 +576,10 @@ function getStatusSeverity(statusKey?: string): 'success' | 'info' | 'warning' |
   return statusMap[statusKey as keyof typeof statusMap].severity;
 }
 
+function isAppointmentStartable(status?: string): boolean {
+  return status === 'scheduled';
+}
+
 // --- Calendar Specific (Placeholder) ---
 // const calendarAppointments = ref([]); // For data fetched for FullCalendar or custom calendar
 // async function fetchCalendarAppointments(startDate, endDate) { ... call /api/appointments/calendar ... }
@@ -653,6 +687,11 @@ watch([searchQuery, consultantFilter, typeFilter, statusFilter, viewMode], () =>
   loadFromServer(); // This will now correctly handle 'upcoming' due to logic inside it
 }, { deep: true });
 
+// --- Method for the "Start Ad-hoc Meeting" button ---
+function startNewAdHocAppointment() {
+  navigateTo('/appointments/start-new-adhoc');
+}
+
 </script>
 
 <style scoped>
@@ -660,6 +699,10 @@ watch([searchQuery, consultantFilter, typeFilter, statusFilter, viewMode], () =>
 /* For example, to ensure DataTable fits well */
 :deep(.p-datatable) {
   border-radius: var(--p-border-radius, 6px); /* Use PrimeVue variable or your own */
+}
+
+:deep(.p-column-header-content) { 
+  justify-content: flex-start; /* Align header text to the left */
 }
 
 :deep(.p-paginator) {

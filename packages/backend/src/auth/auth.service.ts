@@ -9,6 +9,7 @@ import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { PasswordResetDto } from './dto/password-reset.dto';
 import { AuditLogService, LogActionData } from '../modules/audit-log/audit-log.service';
+import { UserRole } from './enums/user-role.enum';
 
 @Injectable()
 export class AuthService {
@@ -159,15 +160,25 @@ export class AuthService {
   }
 
   async findUserByIdForAuth(id: number): Promise<Omit<User, 'password' | 'hashedRefreshToken' | 'validatePassword' | 'hashPassword'> | null> {
-    const user = await this.usersRepository.findOne({
+    // Nejprve načteme uživatele, abychom znali jeho roli
+    const userWithRole = await this.usersRepository.findOne({
       where: { id },
-      // select: ['id', 'name', 'email', 'role', 'status', 'lastActive', 'createdAt', 'updatedAt'],
+      select: ['id', 'role'], // Stačí nám ID a role pro rozhodnutí
     });
 
+    if (!userWithRole) {
+      return null;
+    }
+
+    const findOptions: import('typeorm').FindOneOptions<User> = { where: { id } };
+    if (userWithRole.role === UserRole.PATIENT) {
+      findOptions.relations = ['patientProfile'];
+    }
+
+    const user = await this.usersRepository.findOne(findOptions);
+
     if (user) {
-      // Manuální odstranění citlivých polí, pokud select nestačí nebo pro jistotu
-      // Entity `User` má @Exclude na password a hashedRefreshToken, takže by to mělo být OK
-      // Ale pro explicitnost a pokud ClassSerializerInterceptor není globální nebo se neaplikuje všude:
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, hashedRefreshToken, validatePassword, hashPassword, ...result } = user;
       return result as Omit<User, 'password' | 'hashedRefreshToken' | 'validatePassword' | 'hashPassword'>;
     }

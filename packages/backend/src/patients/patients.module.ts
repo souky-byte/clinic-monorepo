@@ -2,7 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PatientsController } from './patients.controller';
 import { PatientsService } from './patients.service';
-import { Patient } from './entities/patient.entity';
+import { PatientProfile } from './entities/patient-profile.entity';
 import { AuthModule } from '../auth/auth.module';
 import { PurchasesModule } from '../purchases/purchases.module';
 import { User } from '../auth/entities/user.entity';
@@ -12,7 +12,7 @@ import { AuditLogModule } from '../modules/audit-log/audit-log.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Patient, User, Purchase]),
+    TypeOrmModule.forFeature([PatientProfile, User, Purchase]),
     AuthModule,
     forwardRef(() => PurchasesModule),
     forwardRef(() => AppointmentsModule),
@@ -20,6 +20,6 @@ import { AuditLogModule } from '../modules/audit-log/audit-log.module';
   ],
   controllers: [PatientsController],
   providers: [PatientsService],
-  exports: [PatientsService, TypeOrmModule.forFeature([Patient])]
+  exports: [PatientsService, TypeOrmModule.forFeature([PatientProfile])]
 })
 export class PatientsModule {}

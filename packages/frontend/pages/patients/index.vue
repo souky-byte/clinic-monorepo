@@ -1,88 +1,106 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 p-4 md:p-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h1>Seznam pacientů</h1>
-      <NuxtLink to="/patients/new" class="btn btn-primary">
-        <svg class="h-5 w-5 mr-2 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        Přidat pacienta
-      </NuxtLink>
+      <h1 class="text-2xl font-semibold text-gray-900">Seznam pacientů</h1>
+      <Button label="Přidat pacienta" icon="pi pi-plus" @click="navigateToNewPatientPage" />
     </div>
     
-    <div class="card">
-      <Vue3EasyDataTable
-        :headers="headers"
-        :items="items"
-        :loading="loading"
-        :server-items-length="serverItemsLength"
-        v-model:server-options="serverOptions"
-        table-class-name="table"
-        theme-color="#1f2937" 
-        buttons-pagination
-      >
-        <template #item-consultant="item">
-          {{ item.consultant?.name || '-' }}
-        </template>
-        <template #item-lastVisit="item">
-          {{ formatDate(item.lastVisit) }}
-        </template>
-        <template #item-totalSpent="item">
-          {{ formatCurrency(item.totalSpent) }}
-        </template>
-        <template #item-createdAt="item">
-          {{ formatDate(item.createdAt) }}
-        </template>
-        <template #item-actions="item">
-          <div class="flex space-x-2">
-            <!-- TODO: Add Edit/View buttons later -->
-            <button @click="viewPatient(item.id)" class="text-blue-600 hover:text-blue-800 p-1" title="Zobrazit detail">
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-.005.013-.009.026-.014.039a11.953 11.953 0 01-3.14 3.106M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-             <button v-if="isAdmin" @click="deletePatient(item)" class="text-red-600 hover:text-red-800 p-1" title="Smazat pacienta">
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-            </button>
-          </div>
-        </template>
-      </Vue3EasyDataTable>
-    </div>
+    <Card>
+      <template #content>
+        <DataTable
+          :value="items"
+          :loading="loading"
+          lazy
+          paginator
+          :rows="serverOptions.rowsPerPage"
+          :first="firstPageRecord"
+          :totalRecords="serverItemsLength"
+          @page="onPageChange"
+          @sort="onSortChange"
+          dataKey="id"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          currentPageReportTemplate="Zobrazeno {first} až {last} z {totalRecords} záznamů"
+          :rowsPerPageOptions="[10, 25, 50, 100]"
+          class="p-datatable-sm"
+          stripedRows
+          :showGridlines="false"
+          size="small"
+          tableStyle="min-width: 50rem"
+          sortMode="single"
+          removableSort
+          :sortField="serverOptions.sortBy"
+          :sortOrder="serverOptions.sortOrder === 'ASC' ? 1 : (serverOptions.sortOrder === 'DESC' ? -1 : 0)"
+        >
+          <template #empty>Nebyly nalezeni žádní pacienti.</template>
+          <template #loading>Načítání pacientů...</template>
 
-    <!-- Delete Patient Modal - Uncommented -->
-    <dialog-modal
-      v-if="showDeleteModal"
-      :title="`Opravdu smazat pacienta: ${selectedPatient?.name}?`"
-      @close="showDeleteModal = false"
-    >
-      <p class="text-sm text-gray-500">
-        Tato akce je nevratná. Všechna data spojená s tímto pacientem budou trvale odstraněna.
+          <Column field="name" header="Jméno" sortable style="min-width: 12rem;"></Column>
+          <!-- <Column field="email" header="Email" sortable style="min-width: 15rem;"></Column> -->
+          <!-- <Column field="phone" header="Telefon" style="min-width: 10rem;"></Column> -->
+          <Column field="consultant.name" header="Konzultant" sortable :pt="{ headerCell: { class: 'text-left' }, bodyCell: { class: 'text-left' } }">
+            <template #body="slotProps">
+              {{ slotProps.data.consultant?.name || '-' }}
+            </template>
+          </Column>
+          <Column field="lastVisit" header="Poslední návštěva" sortable style="min-width: 10rem;">
+            <template #body="slotProps">
+              {{ formatDate(slotProps.data.lastVisit) }}
+            </template>
+          </Column>
+          <Column field="totalSpent" header="Celkem utraceno" sortable style="min-width: 10rem; text-align: right;">
+            <template #body="slotProps">
+              {{ formatCurrency(slotProps.data.totalSpent) }}
+            </template>
+          </Column>
+          <!-- <Column field="createdAt" header="Vytvořeno" sortable style="min-width: 10rem;">
+            <template #body="slotProps">
+              {{ formatDate(slotProps.data.createdAt) }}
+            </template>
+          </Column> -->
+          <Column header="Akce" style="min-width: 8rem; text-align:center" frozen alignFrozen="right">
+            <template #body="slotProps">
+              <div class="flex gap-2 justify-center">
+                <Button icon="pi pi-eye" text rounded severity="info" @click="viewPatient(slotProps.data.id)" v-tooltip.top="'Zobrazit detail'" />
+                <Button v-if="isAdmin" icon="pi pi-trash" text rounded severity="danger" @click="deletePatient(slotProps.data)" v-tooltip.top="'Smazat pacienta'" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </Card>
+
+    <!-- Delete Patient Modal -->
+    <Dialog v-model:visible="showDeleteModal" header="Smazat pacienta" :modal="true" :style="{ width: '450px' }">
+      <div class="confirmation-content फ्लेक्स items-center">
+        <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
+        <span v-if="selectedPatient">Opravdu chcete smazat pacienta <b>{{selectedPatient.name}}</b>? <br/> Tato akce je nevratná.</span>
+      </div>
+       <p class="text-sm text-gray-500 mt-2 ml-11">
         Pozor: Pokud má pacient záznamy (např. nákupy, schůzky), může být smazání blokováno na straně serveru.
       </p>
-      
-      <div class="flex justify-end space-x-3 mt-4">
-        <button type="button" class="btn btn-secondary" @click="showDeleteModal = false">Zrušit</button>
-        <button type="button" class="btn btn-danger" @click="confirmDeletePatient">Smazat</button>
-      </div>
-    </dialog-modal>
+      <template #footer>
+        <Button label="Zrušit" icon="pi pi-times" text @click="showDeleteModal = false"/>
+        <Button label="Smazat" icon="pi pi-check" class="p-button-danger" @click="confirmDeletePatient" />
+      </template>
+    </Dialog>
 
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue';
-// @ts-ignore
-import Vue3EasyDataTable from 'vue3-easy-data-table';
-import type { Header, Item, ServerOptions } from 'vue3-easy-data-table';
-import 'vue3-easy-data-table/dist/style.css';
+import { useRouter } from 'vue-router'; // Added for navigation
+import DataTable, { type DataTablePageEvent, type DataTableSortEvent } from 'primevue/datatable';
+import Column from 'primevue/column';
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import Card from 'primevue/card';
+import Tooltip from 'primevue/tooltip';
 
 import { useApiService } from '~/composables/useApiService';
 import { useNotificationStore } from '~/stores/notification';
 import { useAuthStore } from '~/stores/auth';
-import DialogModal from '~/components/DialogModal.vue';
+// DialogModal component is no longer used as PrimeVue Dialog is used directly
 
 interface Consultant {
   id: number;
@@ -95,7 +113,8 @@ interface Consultant {
   updatedAt?: string;
 }
 
-interface Patient extends Item {
+// Item interface for DataTable (Patient still fine)
+interface Patient {
   id: number;
   name: string;
   email?: string | null;
@@ -106,7 +125,7 @@ interface Patient extends Item {
   consultant?: Consultant | null;
   consultantId: number;
   lastVisit?: string | null;
-  totalSpent: string; 
+  totalSpent: string | number; // Allow number for API flexibility
   createdAt: string;
   updatedAt: string;
 }
@@ -126,27 +145,24 @@ interface PaginatedPatientsResponseDto {
 const { $api } = useApiService();
 const notificationStore = useNotificationStore();
 const authStore = useAuthStore();
+const router = useRouter(); // For navigation
 
 const isAdmin = computed(() => authStore.isAdmin);
-
-const headers: Header[] = [
-  { text: "Jméno", value: "name", sortable: true },
-  { text: "Email", value: "email", sortable: true },
-  { text: "Telefon", value: "phone", sortable: false },
-  { text: "Konzultant", value: "consultant.name", sortable: true }, // Removed 'field' property
-  { text: "Poslední návštěva", value: "lastVisit", sortable: true },
-  { text: "Celkem utraceno", value: "totalSpent", sortable: true },
-  { text: "Vytvořeno", value: "createdAt", sortable: true },
-  { text: "Akce", value: "actions", width: 100 },
-];
 
 const items = ref<Patient[]>([]);
 const loading = ref(true);
 const serverItemsLength = ref(0);
-const serverOptions = ref<ServerOptions>({
-  page: 1,
+
+// ServerOptions for PrimeVue DataTable
+const serverOptions = ref({
+  page: 1, // PrimeVue Paginator is 0-indexed for page, but API is 1-indexed
   rowsPerPage: 10,
+  sortBy: 'createdAt', // Default sort field
+  sortOrder: 'DESC' as 'ASC' | 'DESC' | undefined | null, // API expects ASC/DESC or null
 });
+
+const firstPageRecord = computed(() => (serverOptions.value.page - 1) * serverOptions.value.rowsPerPage);
+
 
 const showDeleteModal = ref(false);
 const selectedPatient = ref<Patient | null>(null);
@@ -158,9 +174,9 @@ const loadFromServer = async () => {
       page: serverOptions.value.page,
       limit: serverOptions.value.rowsPerPage,
     };
-    if (serverOptions.value.sortBy && serverOptions.value.sortType) {
+    if (serverOptions.value.sortBy && serverOptions.value.sortOrder) {
       params.sortBy = serverOptions.value.sortBy;
-      params.sortOrder = serverOptions.value.sortType === 'desc' ? 'DESC' : 'ASC'; 
+      params.sortOrder = serverOptions.value.sortOrder;
     }
     
     const response = await $api.get<PaginatedPatientsResponseDto>('/patients', { params });
@@ -169,12 +185,28 @@ const loadFromServer = async () => {
   } catch (error: any) {
     console.error('Failed to load patients:', error);
     notificationStore.show({ type: 'error', message: error.response?.data?.message || 'Nepodařilo se načíst pacienty.' });
+    items.value = [];
+    serverItemsLength.value = 0;
   } finally {
     loading.value = false;
   }
 };
 
-watch(serverOptions, loadFromServer, { deep: true });
+// DataTable event handlers
+const onPageChange = (event: DataTablePageEvent) => {
+  serverOptions.value.page = event.page + 1; // API is 1-indexed
+  serverOptions.value.rowsPerPage = event.rows;
+  loadFromServer();
+};
+
+const onSortChange = (event: DataTableSortEvent) => {
+  serverOptions.value.sortBy = event.sortField as string;
+  serverOptions.value.sortOrder = event.sortOrder === 1 ? 'ASC' : (event.sortOrder === -1 ? 'DESC' : null);
+  loadFromServer();
+};
+
+watch(serverOptions, loadFromServer, { deep: true, immediate: false }); // Remove immediate: true as onMounted handles initial load
+
 
 onMounted(() => {
   loadFromServer();
@@ -189,20 +221,24 @@ function formatDate(dateString: string | undefined | null) {
       year: 'numeric',
     });
   } catch (e) {
-    return dateString; 
+    return String(dateString); 
   }
 }
 
 function formatCurrency(value: string | number | undefined | null) {
   if (value === undefined || value === null) return '- Kč';
-  let numericValue = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : value;
+  let numericValue = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : Number(value);
   if (isNaN(numericValue)) return '- Kč';
-  return `${numericValue.toFixed(2)} Kč`;
+  // Format as currency for CZK
+  return numericValue.toLocaleString('cs-CZ', { style: 'currency', currency: 'CZK' });
+}
+
+function navigateToNewPatientPage() {
+  router.push('/patients/new');
 }
 
 function viewPatient(patientId: number) {
-  navigateTo(`/patients/${patientId}`); 
-  console.log('View patient:', patientId);
+  router.push(`/patients/${patientId}`); 
 }
 
 function deletePatient(patient: Patient) {
@@ -213,12 +249,14 @@ function deletePatient(patient: Patient) {
 async function confirmDeletePatient() {
   if (!selectedPatient.value) return;
   
-  loading.value = true;
+  // No need to set loading.value here unless specific for this action
   try {
     await $api.delete(`/patients/${selectedPatient.value.id}`);
     notificationStore.show({ type: 'success', message: `Pacient ${selectedPatient.value.name} byl smazán.`});
     showDeleteModal.value = false;
     selectedPatient.value = null;
+    // Reset to first page if current page becomes empty or for consistency
+    serverOptions.value.page = 1; 
     loadFromServer(); 
   } catch (error: any) {
     console.error('Failed to delete patient:', error);
@@ -227,7 +265,7 @@ async function confirmDeletePatient() {
       message: error.response?.data?.message || 'Nepodařilo se smazat pacienta. Možná má přiřazené nákupy nebo schůzky.' 
     });
   } finally {
-    loading.value = false;
+    // loading.value = false; // Only if set true for this action
     if (showDeleteModal.value) showDeleteModal.value = false; 
   }
 }
@@ -235,29 +273,18 @@ async function confirmDeletePatient() {
 </script>
 
 <style scoped>
-.table :deep(th .easy-data-table__header-text) {
-  font-weight: 600 !important;
-  color: rgb(55 65 81) !important; 
-  text-align: left; 
+/* Remove Vue3EasyDataTable specific styles */
+/* :deep styles for PrimeVue DataTable if needed, but global styles should cover most */
+.p-datatable .p-column-header-content {
+  justify-content: left; /* Example: align header text left if default is center */
 }
 
-.table :deep(thead th) {
-  background-color: #f9fafb; 
-  border-bottom: 2px solid #e5e7eb; 
-  padding-top: 12px !important;    
-  padding-bottom: 12px !important; 
+:deep(.p-datatable) {
+  border-radius: var(--p-border-radius, 6px);
 }
 
-.table :deep(tbody td) {
-  padding: 12px 10px !important; 
-  border-bottom: 1px solid #f3f4f6; 
-}
-
-.table :deep(tbody tr:nth-child(even)) {
-  background-color: #f9fafb; 
-}
-
-.table :deep(tbody tr:hover) {
-  background-color: #f0f9ff; 
+:deep(.p-paginator) {
+  border-bottom-left-radius: var(--p-border-radius, 6px);
+  border-bottom-right-radius: var(--p-border-radius, 6px);
 }
 </style>

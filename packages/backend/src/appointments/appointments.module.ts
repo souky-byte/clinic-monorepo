@@ -9,6 +9,7 @@ import { PatientsModule } from '../patients/patients.module';
 import { AppointmentTypesModule } from '../appointment-types/appointment-types.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { AuditLogModule } from '../modules/audit-log/audit-log.module';
+import { WorkingHoursModule } from '../working-hours/working-hours.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuditLogModule } from '../modules/audit-log/audit-log.module';
     forwardRef(() => AppointmentTypesModule),
     forwardRef(() => InventoryModule),
     AuditLogModule,
+    forwardRef(() => WorkingHoursModule),
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
