@@ -8,7 +8,7 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
 import { InventoryItem } from '../../inventory/entities/inventory-item.entity';
 import { AppointmentType } from '../../appointment-types/entities/appointment-type.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
-import { Patient } from '../../patients/entities/patient.entity';
+import { PatientProfile } from '../../patients/entities/patient-profile.entity';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { Patient } from '../../patients/entities/patient.entity';
       InventoryItem,
       AppointmentType,
       Appointment,
-      Patient,
+      PatientProfile,
     ]),
     forwardRef(() => AuthModule), // forwardRef pro AuthModule, pokud by ConsultantsService byl injectován do AuthService
     AuditLogModule,

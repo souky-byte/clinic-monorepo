@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Post, Body, HttpCode, HttpStatus, Get, Query, Param, ParseIntPipe, Put, Delete } from '@nestjs/common';
+import { Controller, UseGuards, Post, Body, HttpCode, HttpStatus, Get, Query, Param, ParseIntPipe, Put, Delete, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AppointmentsService } from './appointments.service';
@@ -15,29 +15,53 @@ import { CalendarAppointmentItemDto } from './dto/calendar-appointment-item.dto'
 import { TestQueryDto } from './dto/test-query.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiBody, ApiParam, ApiNotFoundResponse, ApiForbiddenResponse } from '@nestjs/swagger';
 import { PaginatedAppointmentsResponseDto } from '../patients/dto/paginated-appointments-response.dto';
+import { BookAppointmentDto } from './dto'; // Changed import to use barrel file
 
 @ApiTags('Appointments Management')
 @ApiBearerAuth()
 @Controller('appointments')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(AuthGuard('jwt'))
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Post()
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Create a new appointment' })
   @ApiCreatedResponse({ description: 'Appointment created successfully.', type: Appointment })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   @ApiBody({ type: CreateAppointmentDto })
   @HttpCode(HttpStatus.CREATED)
-  create(
+  create( // This is the 'create' method for admins/consultants, should be associated with the @Post() above
     @Body() createDto: CreateAppointmentDto,
     @GetUser() currentUser: User,
   ): Promise<Appointment> {
     return this.appointmentsService.create(createDto, currentUser);
   }
 
+  // Method for patients to book appointments
+  @Post('book')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PATIENT)
+  @ApiOperation({ summary: 'Book an available appointment slot (for patients)' })
+  @ApiCreatedResponse({ description: 'Appointment booked successfully.', type: Appointment })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiBody({ type: BookAppointmentDto })
+  @HttpCode(HttpStatus.CREATED)
+  async bookAppointmentByPatient(
+    @Body() bookDto: BookAppointmentDto,
+    @GetUser() currentUser: User,
+  ): Promise<Appointment> {
+    if (currentUser.role !== UserRole.PATIENT) {
+        throw new ForbiddenException('Only patients can book appointments through this endpoint.');
+    }
+    return this.appointmentsService.bookAppointment(bookDto, currentUser);
+  }
+
+  // Note: The 'create' method for admins/consultants is now correctly defined above, associated with the first @Post() decorator.
+
   @Get()
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Get a paginated list of appointments' })
   @ApiOkResponse({ description: 'Successfully retrieved appointments.', type: PaginatedAppointmentsResponseDto })
@@ -54,6 +78,7 @@ export class AppointmentsController {
   }
 
   @Get('calendar')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Get appointments formatted for calendar view' })
   @ApiOkResponse({ description: 'Successfully retrieved calendar appointments.', type: [CalendarAppointmentItemDto] })
@@ -73,7 +98,21 @@ export class AppointmentsController {
     return { message: 'Validation passed for TestQueryDto', receivedData: queryDto };
   }
 
+  @Get('me')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PATIENT, UserRole.CONSULTANT)
+  @ApiOperation({ summary: 'Get my appointments (for patient or consultant)' })
+  @ApiOkResponse({ description: 'Successfully retrieved my appointments.', type: [Appointment] })
+  @ApiForbiddenResponse({ description: 'Forbidden if profile not found for patient.' })
+  async findMyAppointments(
+    @GetUser() currentUser: User,
+    @Query() queryDto: AppointmentQueryDto,
+  ): Promise<Appointment[]> {
+    return this.appointmentsService.findMyNestedAppointments(currentUser, queryDto);
+  }
+
   @Get(':id')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Get a specific appointment by ID' })
   @ApiParam({ name: 'id', description: 'ID of the appointment to retrieve', type: Number })
@@ -88,6 +127,7 @@ export class AppointmentsController {
   }
 
   @Put(':id')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Update an existing appointment' })
   @ApiParam({ name: 'id', description: 'ID of the appointment to update', type: Number })
@@ -128,6 +168,7 @@ export class AppointmentsController {
   }
 
   @Put(':id/status')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Update the status of an appointment' })
   @ApiParam({ name: 'id', description: 'ID of the appointment to update status for', type: Number })
@@ -144,6 +185,7 @@ export class AppointmentsController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Cancel an appointment' })
   @ApiParam({ name: 'id', description: 'ID of the appointment to cancel', type: Number })

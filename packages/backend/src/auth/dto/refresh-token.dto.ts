@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class RefreshTokenDto {
   @ApiProperty({
     description: 'Refresh token used to obtain a new access token',
-    example: 'anotherlongrandomstringrefreshtoken67890',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhdGllbnQuYWxwaGEuZGV1eEBleGFtcGxlLmNvbSIsInN1YiI6NSwiaWF0IjoxNzQ2NjIzNTAwLCJleHAiOjE3NDkyMTU1MDB9.xyz789uvw012',
   })
   @IsNotEmpty()
   @IsString()

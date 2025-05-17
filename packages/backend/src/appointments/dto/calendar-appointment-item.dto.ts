@@ -15,8 +15,8 @@ export class CalendarAppointmentItemDto {
   @ApiProperty({ description: 'End date and time of the appointment in ISO 8601 format', example: '2023-12-20T11:00:00.000Z' })
   end: string;   // ISO string
 
-  @ApiProperty({ description: 'ID of the patient', example: 15 })
-  patientId: number;
+  @ApiProperty({ description: 'ID of the patient profile', example: 15 })
+  patientProfileId: number;
 
   @ApiProperty({ description: 'Name of the patient', example: 'Alice Wonderland' })
   patientName: string;

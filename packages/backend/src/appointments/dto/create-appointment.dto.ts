@@ -1,6 +1,7 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, IsDateString, IsArray, ValidateNested, Min, ArrayMinSize } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, IsDateString, IsArray, ValidateNested, Min, ArrayMinSize, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { AppointmentStatus } from '../entities/appointment.entity';
 
 class AppointmentProductItemDto {
   @ApiProperty({ description: 'ID of the inventory item (product) sold during the appointment', example: 101, minimum: 1 })
@@ -33,6 +34,16 @@ export class CreateAppointmentDto {
   @ApiProperty({ description: 'Date and time of the appointment in ISO 8601 format', example: '2023-11-15T14:30:00.000Z' })
   @IsDateString()
   date: string;
+
+  @ApiPropertyOptional({
+    description: 'Status of the appointment',
+    enum: AppointmentStatus,
+    default: AppointmentStatus.UPCOMING,
+    example: AppointmentStatus.COMPLETED,
+  })
+  @IsOptional()
+  @IsEnum(AppointmentStatus)
+  status?: AppointmentStatus;
 
   @ApiPropertyOptional({ description: 'Optional notes for the appointment', example: 'Patient needs to discuss test results.' })
   @IsOptional()

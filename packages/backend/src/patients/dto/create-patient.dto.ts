@@ -2,20 +2,26 @@ import { IsString, IsEmail, IsOptional, IsDateString, IsInt, MinLength, MaxLengt
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePatientDto {
-  @ApiProperty({ description: "Patient's full name", example: 'Alice Wonderland' })
+  @ApiProperty({ description: "Full name for the patient's account and profile", example: 'Alice Wonderland' })
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
   @MaxLength(255)
   name: string;
 
-  @ApiPropertyOptional({ description: "Patient's email address", example: 'alice@example.com' })
+  @ApiProperty({ description: "Login email address for the patient's user account", example: 'alice.patient@example.com' })
   @IsEmail()
-  @IsOptional()
+  @IsNotEmpty()
   @MaxLength(255)
-  email?: string;
+  email: string;
 
-  @ApiPropertyOptional({ description: "Patient's phone number", example: '+420123456789' })
+  @ApiProperty({ description: 'Password for the patient\'s user account (min 8 characters)', example: 'AlicePass123!' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  password: string;
+
+  @ApiPropertyOptional({ description: "Patient's contact phone number", example: '+420123456789' })
   @IsString()
   @IsOptional()
   @MaxLength(50)
@@ -29,12 +35,12 @@ export class CreatePatientDto {
   @ApiPropertyOptional({ description: "Patient's date of birth in YYYY-MM-DD format", example: '1990-01-01' })
   @IsDateString()
   @IsOptional()
-  dateOfBirth?: string; // Přijímáme jako string, validátor ověří formát
+  dateOfBirth?: string;
 
-  @ApiProperty({ description: "ID of the consultant assigned to this patient", example: 1 })
+  @ApiPropertyOptional({ description: "ID of the primary consultant assigned to this patient (optional at creation)", example: 1, nullable: true })
   @IsInt()
-  @IsNotEmpty()
-  consultantId: number;
+  @IsOptional()
+  primaryConsultantId?: number;
 
   @ApiPropertyOptional({ description: "Optional notes about the patient", example: 'Allergic to cats.' })
   @IsString()

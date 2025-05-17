@@ -34,7 +34,36 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Log in a user' })
-  @ApiResponse({ status: 200, description: 'Login successful, returns tokens and user info.' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Login successful, returns tokens and user info.',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhdGllbnQuYWxwaGEuZGV1eEBleGFtcGxlLmNvbSIsInN1YiI6NSwicm9sZSI6InBhdGllbnQiLCJpYXQiOjE3NDY2MjM1MDAsImV4cCI6MTc0NjYyNzEwMH0.abc123def456'
+        },
+        refreshToken: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhdGllbnQuYWxwaGEuZGV1eEBleGFtcGxlLmNvbSIsInN1YiI6NSwiaWF0IjoxNzQ2NjIzNTAwLCJleHAiOjE3NDkyMTU1MDB9.xyz789uvw012'
+        },
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 5 },
+            name: { type: 'string', example: 'Patient Alpha' },
+            email: { type: 'string', example: 'patient.alpha.deux@example.com' },
+            role: { type: 'string', example: 'patient' },
+            status: { type: 'string', example: 'active' },
+            lastActive: { type: 'string', format: 'date-time', example: '2025-05-07T13:05:44.879Z' },
+            createdAt: { type: 'string', format: 'date-time', example: '2025-05-06T16:20:51.170Z' },
+            updatedAt: { type: 'string', format: 'date-time', example: '2025-05-07T11:05:44.931Z' }
+          }
+        }
+      }
+    }
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   @ApiBody({ type: LoginDto })
   @HttpCode(HttpStatus.OK)
@@ -83,7 +112,19 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Log out current user (invalidates refresh token)' })
-  @ApiResponse({ status: 200, description: 'Successfully logged out.' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Successfully logged out.',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Successfully logged out'
+        }
+      }
+    }
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @HttpCode(HttpStatus.OK)
   async logout(@GetUser() user: User): Promise<{ message: string }> {
@@ -92,12 +133,69 @@ export class AuthController {
   }
 
   @Post('password/reset-request')
+  @ApiOperation({ summary: 'Request a password reset link' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Password reset request processed. A reset link will be sent to the provided email if it exists in the system.',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'If your email is registered in our system, you will receive a password reset link.'
+        }
+      }
+    }
+  })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          example: 'patient.alpha.deux@example.com'
+        }
+      },
+      required: ['email']
+    }
+  })
   @HttpCode(HttpStatus.OK)
   requestPasswordReset(@Body() body: PasswordResetRequestDto): Promise<{ message: string; resetTokenForTesting?: string }> {
     return this.authService.requestPasswordReset(body.email);
   }
 
   @Post('password/reset')
+  @ApiOperation({ summary: 'Reset password using a valid reset token' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Password has been successfully reset.',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Password has been successfully reset.'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired reset token.' })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        token: {
+          type: 'string',
+          example: '7f58d12e-de3a-4f93-a6c2-90f4920cb2f4'
+        },
+        newPassword: {
+          type: 'string',
+          example: 'newSecurePassword456'
+        }
+      },
+      required: ['token', 'newPassword']
+    }
+  })
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: PasswordResetDto): Promise<{ message: string }> {
     await this.authService.resetPassword(resetPasswordDto);

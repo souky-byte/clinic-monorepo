@@ -1,14 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, BeforeInsert, BeforeUpdate, OneToMany, ManyToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, BeforeInsert, BeforeUpdate, OneToMany, ManyToMany, OneToOne, JoinColumn } from 'typeorm';
 import * as argon2 from 'argon2';
 import { Exclude } from 'class-transformer';
 import { InventoryItem } from '../../inventory/entities/inventory-item.entity';
-import { Patient } from '../../patients/entities/patient.entity';
 import { Purchase } from '../../purchases/entities/purchase.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
 import { AppointmentType } from '../../appointment-types/entities/appointment-type.entity';
 import { UserStatus } from '../../modules/consultants/dto/update-consultant.dto';
 import { UserRole } from '../enums/user-role.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PatientProfile } from '../../patients/entities/patient-profile.entity';
 
 export { UserRole };
 
@@ -70,6 +70,10 @@ export class User {
   @Exclude()
   passwordResetExpires?: Date;
 
+  @ApiPropertyOptional({ description: "Patient's specific profile data, if user is a patient", type: () => PatientProfile, nullable: true })
+  @OneToOne(() => PatientProfile, patientProfile => patientProfile.user, { cascade: true, nullable: true, eager: false })
+  patientProfile?: PatientProfile;
+
   @OneToMany(() => InventoryItem, item => item.createdBy)
   createdInventoryItems: InventoryItem[];
 
@@ -79,8 +83,8 @@ export class User {
   @ManyToMany(() => InventoryItem, item => item.visibleToSpecificConsultants)
   visibleInventoryItems: InventoryItem[];
 
-  @OneToMany(() => Patient, patient => patient.consultant)
-  assignedPatients: Patient[];
+  @OneToMany(() => PatientProfile, patientProfile => patientProfile.primaryConsultant)
+  assignedPatients: PatientProfile[];
 
   @OneToMany(() => Purchase, purchase => purchase.consultant)
   recordedPurchases: Purchase[];

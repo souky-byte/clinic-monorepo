@@ -44,15 +44,6 @@
 
 <script setup lang="ts">
 import { h, computed, ref, watchEffect } from 'vue';
-// Remove Radix imports if no longer used after p-menu integration
-/*
-import {
-  NavigationMenuRoot,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuLink,
-} from 'radix-vue';
-*/
 import { useAuthStore } from '~/stores/auth';
 import Menu from 'primevue/menu';
 import Tooltip from 'primevue/tooltip';

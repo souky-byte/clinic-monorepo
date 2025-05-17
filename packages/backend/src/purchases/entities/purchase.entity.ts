@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { Patient } from '../../patients/entities/patient.entity';
+import { PatientProfile } from '../../patients/entities/patient-profile.entity';
 import { PurchaseItem } from './purchase-item.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -10,17 +10,17 @@ export class Purchase {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty({ description: 'Patient who made the purchase', type: () => Patient })
-  @ManyToOne(() => Patient, patient => patient.purchases, { nullable: false, onDelete: 'RESTRICT', eager: true }) // Added eager based on curl output
-  @JoinColumn({ name: 'patientId' })
-  patient: Patient;
+  @ApiProperty({ description: 'Patient profile who made the purchase', type: () => PatientProfile })
+  @ManyToOne(() => PatientProfile, patientProfile => patientProfile.purchases, { nullable: false, onDelete: 'RESTRICT', eager: true })
+  @JoinColumn({ name: 'patientProfileId' })
+  patientProfile: PatientProfile;
 
-  @ApiProperty({ description: 'ID of the patient', example: 1 })
-  @Column()
-  patientId: number;
+  @ApiProperty({ description: 'ID of the patient profile', example: 1 })
+  @Column({ name: 'patientProfileId' })
+  patientProfileId: number;
 
   @ApiProperty({ description: 'Consultant who recorded the purchase', type: () => User })
-  @ManyToOne(() => User, user => user.recordedPurchases, { nullable: false, onDelete: 'RESTRICT', eager: true }) // Added eager based on curl output
+  @ManyToOne(() => User, user => user.recordedPurchases, { nullable: false, onDelete: 'RESTRICT', eager: true })
   @JoinColumn({ name: 'consultantId' })
   consultant: User;
 
@@ -38,7 +38,7 @@ export class Purchase {
 
   @ApiProperty({ description: 'Total amount of the purchase', example: '550.00', type: 'string' })
   @Column('decimal', { precision: 10, scale: 2 })
-  totalAmount: number; // TypeORM converts to number, response is string
+  totalAmount: number;
 
   @ApiPropertyOptional({ description: 'Additional notes for the purchase', example: 'Nákup vitamínu C', nullable: true })
   @Column({ type: 'text', nullable: true })

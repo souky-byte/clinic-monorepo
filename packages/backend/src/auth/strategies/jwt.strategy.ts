@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<Omit<User, 'password' | 'hashedRefreshToken' | 'validatePassword' | 'hashPassword'> | null> {
-    // console.log('JwtStrategy validate PAYLOAD:', JSON.stringify(payload)); // Correctly removing/commenting this log
+    // console.log('JwtStrategy validate PAYLOAD:', JSON.stringify(payload)); // REMOVE THIS
     
     // Payload obsahuje { email, sub, role, iat, exp }
     // Můžeme zde načíst kompletního uživatele z databáze, pokud je to potřeba,
@@ -42,9 +42,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // Takže načtení uživatele z DB je vhodnější.
 
     const user = await this.authService.findUserByIdForAuth(payload.sub);
-    // console.log('JwtStrategy validate USER FROM SERVICE:', user ? JSON.stringify(user) : null); // Correctly removing/commenting this log
+    // console.log('JwtStrategy validate USER FROM SERVICE:', user ? JSON.stringify(user) : null); // REMOVE THIS
     if (!user) {
-      // console.error('JwtStrategy: User not found by findUserByIdForAuth, payload.sub:', payload.sub); // Keep console.error for actual errors
+      // console.error('JwtStrategy: User not found by findUserByIdForAuth, payload.sub:', payload.sub); // Keep or remove optional error log
       throw new UnauthorizedException('User not found or token invalid');
     }
     return user; // AuthService.findUserByIdForAuth by měl vrátit uživatele ve formátu pro /me

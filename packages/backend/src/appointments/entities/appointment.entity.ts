@@ -1,14 +1,18 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { Patient } from '../../patients/entities/patient.entity';
+import { PatientProfile } from '../../patients/entities/patient-profile.entity';
 import { AppointmentType } from '../../appointment-types/entities/appointment-type.entity';
 import { AppointmentProductItem } from './appointment-product-item.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum AppointmentStatus {
+  SCHEDULED = 'scheduled',
   UPCOMING = 'upcoming',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+  REJECTED = 'rejected',
+  // CONFIRMED = 'confirmed', // Future consideration
+  // NO_SHOW = 'no_show'    // Future consideration
 }
 
 @Entity('appointments')
@@ -18,13 +22,13 @@ export class Appointment {
   id: number;
 
   @ApiProperty({ description: 'ID of the patient for this appointment', example: 1 })
-  @Column()
-  patientId: number;
+  @Column({ name: 'patientProfileId' })
+  patientProfileId: number;
 
-  @ApiProperty({ description: 'Patient details', type: () => Patient })
-  @ManyToOne(() => Patient, patient => patient.appointments, { eager: true })
-  @JoinColumn({ name: 'patientId' })
-  patient: Patient;
+  @ApiProperty({ description: 'Patient profile details', type: () => PatientProfile })
+  @ManyToOne(() => PatientProfile, patientProfile => patientProfile.appointments, { eager: true })
+  @JoinColumn({ name: 'patientProfileId' })
+  patientProfile: PatientProfile;
 
   @ApiProperty({ description: 'ID of the appointment type', example: 2 })
   @Column()

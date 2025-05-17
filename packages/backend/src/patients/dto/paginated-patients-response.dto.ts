@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Patient } from '../entities/patient.entity';
+import { PatientProfile } from '../entities/patient-profile.entity';
 
 // Reusable PaginationMetaDto (could be moved to a common/shared DTO directory)
 class PaginationMetaDto {
@@ -18,7 +18,7 @@ class PaginationMetaDto {
 
 export class PaginatedPatientsResponseDto {
   @ApiProperty({
-    type: () => [Patient], // Use arrow function for circular dependency avoidance with entities
+    type: () => [PatientProfile], // Use arrow function for circular dependency avoidance with entities
     example: [
       {
         id: 1,
@@ -44,7 +44,7 @@ export class PaginatedPatientsResponseDto {
     ],
     description: 'Array of patient records for the current page'
   })
-  data: Patient[];
+  data: PatientProfile[];
 
   @ApiProperty({ type: PaginationMetaDto })
   meta: PaginationMetaDto;

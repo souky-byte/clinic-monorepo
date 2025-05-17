@@ -1,10 +1,10 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In, Brackets, EntityNotFoundError, FindOptionsWhere, Between } from 'typeorm';
 import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { AppointmentProductItem } from './entities/appointment-product-item.entity';
 import { User, UserRole } from '../auth/entities/user.entity';
-import { Patient } from '../patients/entities/patient.entity';
+import { PatientProfile } from '../patients/entities/patient-profile.entity';
 import { AppointmentType } from '../appointment-types/entities/appointment-type.entity';
 import { InventoryItem } from '../inventory/entities/inventory-item.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -14,6 +14,9 @@ import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto'
 import { CalendarQueryDto } from './dto/calendar-query.dto';
 import { CalendarAppointmentItemDto } from './dto/calendar-appointment-item.dto';
 import { AuditLogService } from '../modules/audit-log/audit-log.service';
+import { MoreThan, LessThan } from 'typeorm'; // Pokud již není, nebo podobný import pro operátory
+import { WorkingHoursService } from '../working-hours/working-hours.service';
+import { BookAppointmentDto } from './dto/book-appointment.dto';
 
 @Injectable()
 export class AppointmentsService {
@@ -26,23 +29,25 @@ export class AppointmentsService {
     private appointmentProductItemsRepository: Repository<AppointmentProductItem>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    @InjectRepository(Patient)
-    private patientsRepository: Repository<Patient>,
+    @InjectRepository(PatientProfile)
+    private patientProfilesRepository: Repository<PatientProfile>,
     @InjectRepository(AppointmentType)
     private appointmentTypesRepository: Repository<AppointmentType>,
     @InjectRepository(InventoryItem)
     private inventoryItemsRepository: Repository<InventoryItem>,
     private entityManager: EntityManager,
     private auditLogService: AuditLogService,
+    @Inject(forwardRef(() => WorkingHoursService))
+    private workingHoursService: WorkingHoursService,
   ) {}
 
   async create(createDto: CreateAppointmentDto, currentUser: User): Promise<Appointment> {
     return this.entityManager.transaction(async transactionalEntityManager => {
-      const { patientId, appointmentTypeId, consultantId, date, notes, products: productDtos = [] } = createDto;
+      const { patientId, appointmentTypeId, consultantId, date, notes, products: productDtos = [], status: requestedStatus } = createDto;
       const itemDetailsForLog: {id: number, name: string, quantity: number}[] = [];
 
-      const patient = await transactionalEntityManager.findOne(Patient, { where: { id: patientId } });
-      if (!patient) throw new NotFoundException(`Patient with ID "${patientId}" not found.`);
+      const patientProfile = await transactionalEntityManager.findOne(PatientProfile, { where: { id: patientId } });
+      if (!patientProfile) throw new NotFoundException(`Patient profile with ID "${patientId}" not found.`);
 
       const appointmentType = await transactionalEntityManager.findOne(AppointmentType, { where: { id: appointmentTypeId } });
       if (!appointmentType) throw new NotFoundException(`Appointment type with ID "${appointmentTypeId}" not found.`);
@@ -107,34 +112,34 @@ export class AppointmentsService {
       const finalTotalPrice = parseFloat((appointmentTypePrice + productsTotalPrice).toFixed(2));
 
       const newAppointment = transactionalEntityManager.create(Appointment, {
-        patientId: patient.id,
-        patient: patient,
+        patientProfileId: patientProfile.id,
+        patientProfile: patientProfile,
         appointmentTypeId: appointmentType.id,
         appointmentType: appointmentType,
         consultantId: assignedConsultant.id,
         consultant: assignedConsultant,
         date: new Date(date),
         notes,
-        status: AppointmentStatus.UPCOMING,
+        status: requestedStatus || AppointmentStatus.UPCOMING,
         appointmentProducts: appointmentProductItems, 
         totalPrice: finalTotalPrice,
       });
       
       const savedAppointment = await transactionalEntityManager.save(Appointment, newAppointment);
       
-      const currentTotalSpent = parseFloat(patient.totalSpent as any || '0');
-      patient.totalSpent = parseFloat((currentTotalSpent + finalTotalPrice).toFixed(2));
+      const currentTotalSpent = parseFloat(patientProfile.totalSpent as any || '0');
+      patientProfile.totalSpent = parseFloat((currentTotalSpent + finalTotalPrice).toFixed(2));
       
       const patientAppointmentsForLastVisit = await transactionalEntityManager.find(Appointment, {
-        where: { patientId: patient.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
+        where: { patientProfileId: patientProfile.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
         order: { date: 'DESC' },
       });
       if (patientAppointmentsForLastVisit.length > 0) {
-        patient.lastVisit = patientAppointmentsForLastVisit[0].date;
+        patientProfile.lastVisit = patientAppointmentsForLastVisit[0].date;
       } else {
-        patient.lastVisit = undefined;
+        patientProfile.lastVisit = undefined;
       }
-      await transactionalEntityManager.save(Patient, patient);
+      await transactionalEntityManager.save(PatientProfile, patientProfile);
 
       this.auditLogService.logAction({
         userId: currentUser.id,
@@ -142,21 +147,22 @@ export class AppointmentsService {
         action: 'APPOINTMENT_CREATED',
         details: {
           appointmentId: savedAppointment.id,
-          patientId: patient.id,
-          patientName: patient.name,
+          patientProfileId: patientProfile.id,
+          patientName: patientProfile.name,
           appointmentTypeId: appointmentType.id,
           appointmentTypeName: appointmentType.name,
           consultantId: assignedConsultant.id,
           consultantName: assignedConsultant.name,
           date: savedAppointment.date,
           totalPrice: savedAppointment.totalPrice,
+          status: savedAppointment.status,
           items: itemDetailsForLog,
         }
       });
 
       const resultAppointment = await transactionalEntityManager.findOne(Appointment, {
         where: { id: savedAppointment.id },
-        relations: ['patient', 'consultant', 'appointmentType', 'appointmentProducts', 'appointmentProducts.inventoryItem'],
+        relations: ['patientProfile', 'consultant', 'appointmentType', 'appointmentProducts', 'appointmentProducts.inventoryItem'],
       });
       
       if (!resultAppointment) {
@@ -189,7 +195,7 @@ export class AppointmentsService {
       search,
       status,
       consultantId: filterConsultantId,
-      patientId,
+      patientProfileId,
       appointmentTypeId,
       startDate,
       endDate,
@@ -197,7 +203,8 @@ export class AppointmentsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.appointmentsRepository.createQueryBuilder('appointment')
-      .leftJoinAndSelect('appointment.patient', 'patient')
+      .leftJoinAndSelect('appointment.patientProfile', 'patientProfile')
+      .leftJoinAndSelect('patientProfile.user', 'patientUser')
       .leftJoinAndSelect('appointment.consultant', 'consultant')
       .leftJoinAndSelect('appointment.appointmentType', 'appointmentType')
       .leftJoinAndSelect('appointment.appointmentProducts', 'appointmentProductItem')
@@ -209,8 +216,8 @@ export class AppointmentsService {
       queryBuilder.where('appointment.consultantId = :filterConsultantId', { filterConsultantId });
     }
 
-    if (patientId) {
-      queryBuilder.andWhere('appointment.patientId = :patientId', { patientId });
+    if (patientProfileId) {
+      queryBuilder.andWhere('appointment.patientProfileId = :patientProfileId', { patientProfileId });
     }
     if (appointmentTypeId) {
       queryBuilder.andWhere('appointment.appointmentTypeId = :appointmentTypeId', { appointmentTypeId });
@@ -230,7 +237,8 @@ export class AppointmentsService {
     if (search) {
       queryBuilder.andWhere(
         new Brackets(qb => {
-          qb.where('patient.name ILIKE :search', { search: `%${search}%` })
+          qb.where('patientProfile.name ILIKE :search', { search: `%${search}%` })
+            .orWhere('patientUser.email ILIKE :search', { search: `%${search}%` })
             .orWhere('consultant.name ILIKE :search', { search: `%${search}%` })
             .orWhere('appointmentType.name ILIKE :search', { search: `%${search}%` })
             .orWhere('appointment.notes ILIKE :search', { search: `%${search}%` });
@@ -240,7 +248,7 @@ export class AppointmentsService {
 
     const validSortByFields: Record<AppointmentSortBy, string> = {
       [AppointmentSortBy.DATE]: 'appointment.date',
-      [AppointmentSortBy.PATIENT_NAME]: 'patient.name',
+      [AppointmentSortBy.PATIENT_NAME]: 'patientProfile.name',
       [AppointmentSortBy.CONSULTANT_NAME]: 'consultant.name',
       [AppointmentSortBy.TYPE_NAME]: 'appointmentType.name',
       [AppointmentSortBy.STATUS]: 'appointment.status',
@@ -261,11 +269,76 @@ export class AppointmentsService {
     }
   }
 
+  async findMyNestedAppointments(currentUser: User, queryDto: AppointmentQueryDto): Promise<Appointment[]> {
+    this.logger.debug(`User ${currentUser.id} (${currentUser.role}) fetching their appointments.`);
+    const { page = 1, limit = 100, sortBy = AppointmentSortBy.DATE, sortOrder = 'DESC', status, startDate, endDate, appointmentTypeId } = queryDto; // Zvýšený defaultní limit pro "moje" schůzky
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.appointmentsRepository.createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.patientProfile', 'patientProfile')
+      .leftJoinAndSelect('patientProfile.user', 'patientUser') // Pro případ, že bychom potřebovali info z User entity pacienta
+      .leftJoinAndSelect('appointment.consultant', 'consultant')
+      .leftJoinAndSelect('appointment.appointmentType', 'appointmentType')
+      .leftJoinAndSelect('appointment.appointmentProducts', 'appointmentProductItem')
+      .leftJoinAndSelect('appointmentProductItem.inventoryItem', 'inventoryItem');
+
+    if (currentUser.role === UserRole.PATIENT) {
+      const patientProfile = await this.patientProfilesRepository.findOne({ where: { userId: currentUser.id } });
+      if (!patientProfile) {
+        this.logger.warn(`No patient profile found for user ID ${currentUser.id}. Returning empty array for /me.`);
+        return [];
+      }
+      queryBuilder.where('appointment.patientProfileId = :patientProfileId', { patientProfileId: patientProfile.id });
+    } else if (currentUser.role === UserRole.CONSULTANT) {
+      queryBuilder.where('appointment.consultantId = :consultantId', { consultantId: currentUser.id });
+    } else {
+      this.logger.warn(`User role ${currentUser.role} is not explicitly handled for /appointments/me. Returning empty array.`);
+      return [];
+    }
+
+    if (status) {
+      queryBuilder.andWhere('appointment.status = :status', { status });
+    }
+    if (appointmentTypeId) {
+      queryBuilder.andWhere('appointment.appointmentTypeId = :appointmentTypeId', { appointmentTypeId });
+    }
+    if (startDate) {
+      queryBuilder.andWhere('appointment.date >= :startDate', { startDate });
+    }
+    if (endDate) {
+      const inclusiveEndDate = new Date(endDate);
+      inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
+      queryBuilder.andWhere('appointment.date < :inclusiveEndDate', { inclusiveEndDate: inclusiveEndDate.toISOString().split('T')[0] });
+    }
+    
+    const validSortByFields: Record<AppointmentSortBy, string> = {
+      [AppointmentSortBy.DATE]: 'appointment.date',
+      [AppointmentSortBy.PATIENT_NAME]: 'patientProfile.name',
+      [AppointmentSortBy.CONSULTANT_NAME]: 'consultant.name',
+      [AppointmentSortBy.TYPE_NAME]: 'appointmentType.name',
+      [AppointmentSortBy.STATUS]: 'appointment.status',
+      [AppointmentSortBy.CREATED_AT]: 'appointment.createdAt',
+    };
+
+    const safeSortBy = validSortByFields[sortBy] || validSortByFields[AppointmentSortBy.DATE];
+    queryBuilder.orderBy(safeSortBy, sortOrder.toUpperCase() as 'ASC' | 'DESC');
+
+    queryBuilder.skip(skip).take(limit);
+
+    try {
+      const appointments = await queryBuilder.getMany();
+      return appointments;
+    } catch (error) {
+      this.logger.error(`Failed to fetch appointments for user ${currentUser.id}: ${(error as Error).message}`, (error as Error).stack);
+      throw new InternalServerErrorException('Error fetching appointments.');
+    }
+  }
+
   async findOne(id: number, currentUser: User): Promise<Appointment> {
     const appointment = await this.appointmentsRepository.findOne({
       where: { id },
       relations: [
-        'patient', 
+        'patientProfile', 
         'consultant', 
         'appointmentType', 
         'appointmentProducts', 
@@ -291,7 +364,7 @@ export class AppointmentsService {
       const appointment = await transactionalEntityManager.findOne(Appointment, {
         where: { id },
         relations: [
-          'patient', 
+          'patientProfile', 
           'consultant',
           'appointmentType',
           'appointmentProducts',
@@ -312,11 +385,6 @@ export class AppointmentsService {
         }
       }
       
-      if (updateDto.patientId && updateDto.patientId !== appointment.patientId) {
-          this.logger.warn(`Attempt to change patientId for appointment ${id} blocked as it's not allowed for this operation.`);
-          throw new BadRequestException('Changing the patient for an appointment is not supported in this operation.');
-      }
-      
       if (appointment.status === AppointmentStatus.CANCELLED) {
           throw new BadRequestException('Cannot update a cancelled appointment.');
       }
@@ -325,8 +393,8 @@ export class AppointmentsService {
       }
 
       const originalAppointmentTotalPrice = parseFloat(appointment.totalPrice as any);
-      const patient = await transactionalEntityManager.findOneOrFail(Patient, { where: { id: appointment.patientId } });
-      const originalPatientTotalSpent = parseFloat(patient.totalSpent as any);
+      const patientProfile = await transactionalEntityManager.findOneOrFail(PatientProfile, { where: { id: appointment.patientProfileId } });
+      const originalPatientTotalSpent = parseFloat(patientProfile.totalSpent as any);
       const originalAppointmentProducts = [...appointment.appointmentProducts];
 
       if (updateDto.notes !== undefined) {
@@ -439,26 +507,26 @@ export class AppointmentsService {
       const savedAppointment = await transactionalEntityManager.save(Appointment, appointment); 
 
       const priceDifference = parseFloat(savedAppointment.totalPrice as any) - originalAppointmentTotalPrice;
-      patient.totalSpent = parseFloat((originalPatientTotalSpent + priceDifference).toFixed(2));
-      this.logger.log(`Patient ID ${patient.id} total spent updated from ${originalPatientTotalSpent.toFixed(2)} to: ${patient.totalSpent.toFixed(2)} (difference: ${priceDifference.toFixed(2)})`);
+      patientProfile.totalSpent = parseFloat((originalPatientTotalSpent + priceDifference).toFixed(2));
+      this.logger.log(`Patient ID ${patientProfile.id} total spent updated from ${originalPatientTotalSpent.toFixed(2)} to: ${patientProfile.totalSpent.toFixed(2)} (difference: ${priceDifference.toFixed(2)})`);
       
       const patientAppointments = await transactionalEntityManager.find(Appointment, {
-        where: { patientId: patient.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
+        where: { patientProfileId: patientProfile.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
         order: { date: 'DESC' },
       });
 
-      const oldLastVisitTime = patient.lastVisit instanceof Date ? patient.lastVisit.getTime() : null;
+      const oldLastVisitTime = patientProfile.lastVisit instanceof Date ? patientProfile.lastVisit.getTime() : null;
       if (patientAppointments.length > 0) {
-        patient.lastVisit = patientAppointments[0].date;
+        patientProfile.lastVisit = patientAppointments[0].date;
       } else {
-        patient.lastVisit = undefined;
+        patientProfile.lastVisit = undefined;
       }
-      const newLastVisitTime = patient.lastVisit instanceof Date ? patient.lastVisit.getTime() : null;
+      const newLastVisitTime = patientProfile.lastVisit instanceof Date ? patientProfile.lastVisit.getTime() : null;
 
       if (oldLastVisitTime !== newLastVisitTime) {
-          this.logger.log(`Patient ID ${patient.id} last visit reliably updated to: ${patient.lastVisit ? patient.lastVisit.toISOString() : 'undefined'}`);
+          this.logger.log(`Patient ID ${patientProfile.id} last visit reliably updated to: ${patientProfile.lastVisit ? patientProfile.lastVisit.toISOString() : 'undefined'}`);
       }
-      await transactionalEntityManager.save(Patient, patient);
+      await transactionalEntityManager.save(PatientProfile, patientProfile);
 
       const changes = this.diffObjects(originalAppointmentProducts, savedAppointment.appointmentProducts);
       if (Object.keys(changes).length > 0) {
@@ -472,7 +540,7 @@ export class AppointmentsService {
 
       const resultAppointment = await transactionalEntityManager.findOneOrFail(Appointment, {
         where: { id: savedAppointment.id }, 
-        relations: ['patient', 'consultant', 'appointmentType', 'appointmentProducts', 'appointmentProducts.inventoryItem'],
+        relations: ['patientProfile', 'consultant', 'appointmentType', 'appointmentProducts', 'appointmentProducts.inventoryItem'],
       });
       this.logger.log(`Appointment ID ${id} successfully updated and re-fetched.`);
       return resultAppointment;
@@ -492,7 +560,7 @@ export class AppointmentsService {
     return this.entityManager.transaction(async transactionalEntityManager => {
       const appointment = await transactionalEntityManager.findOne(Appointment, { 
           where: { id },
-          relations: ['consultant', 'patient', 'appointmentType', 'appointmentProducts', 'appointmentProducts.inventoryItem'], 
+          relations: ['consultant', 'patientProfile', 'appointmentType', 'appointmentProducts', 'appointmentProducts.inventoryItem'], 
       });
       if (!appointment) throw new NotFoundException(`Appointment with ID "${id}" not found.`);
 
@@ -510,7 +578,7 @@ export class AppointmentsService {
       if (oldStatus !== AppointmentStatus.CANCELLED && newStatus === AppointmentStatus.CANCELLED) {
         this.logger.log(`Appointment ID ${id} status changed to CANCELLED. Reverting inventory and patient stats.`);
         await this.entityManager.transaction(async transactionalEntityManager => {
-          const patient = await transactionalEntityManager.findOneOrFail(Patient, { where: {id: appointment.patientId }});
+          const patient = await transactionalEntityManager.findOneOrFail(PatientProfile, { where: {id: appointment.patientProfileId }});
           const originalAppointmentPriceForCancellation = parseFloat(appointment.totalPrice as any);
 
           for (const aptProduct of appointment.appointmentProducts) {
@@ -527,7 +595,7 @@ export class AppointmentsService {
           if (patient.totalSpent < 0) patient.totalSpent = 0;
 
           const patientAppointments = await transactionalEntityManager.find(Appointment, {
-              where: { patientId: patient.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
+              where: { patientProfileId: patient.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
               order: { date: 'DESC' },
           });
           if (patientAppointments.length > 0) {
@@ -535,7 +603,7 @@ export class AppointmentsService {
           } else {
               patient.lastVisit = undefined;
           }
-          await transactionalEntityManager.save(Patient, patient);
+          await transactionalEntityManager.save(PatientProfile, patient);
           await transactionalEntityManager.save(Appointment, appointment);
         });
       } else if (oldStatus === AppointmentStatus.CANCELLED && (newStatus === AppointmentStatus.UPCOMING || newStatus === AppointmentStatus.COMPLETED)) {
@@ -545,9 +613,9 @@ export class AppointmentsService {
              throw new BadRequestException(`Reverting a CANCELLED appointment status to ${newStatus} via this endpoint is complex and not fully supported. Please use the full update endpoint if you need to reconstruct a cancelled appointment.`);
           }
            await this.entityManager.transaction(async transactionalEntityManager => {
-              const patient = await transactionalEntityManager.findOneOrFail(Patient, { where: {id: appointment.patientId }});
+              const patient = await transactionalEntityManager.findOneOrFail(PatientProfile, { where: {id: appointment.patientProfileId }});
               const patientAppointments = await transactionalEntityManager.find(Appointment, {
-                  where: { patientId: patient.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
+                  where: { patientProfileId: patient.id, status: In([AppointmentStatus.UPCOMING, AppointmentStatus.COMPLETED]) },
                   order: { date: 'DESC' },
               });
               if (patientAppointments.length > 0) {
@@ -555,7 +623,7 @@ export class AppointmentsService {
               } else {
                   patient.lastVisit = undefined;
               }
-              await transactionalEntityManager.save(Patient, patient);
+              await transactionalEntityManager.save(PatientProfile, patient);
               await transactionalEntityManager.save(Appointment, appointment);
           });
       } else {
@@ -572,7 +640,7 @@ export class AppointmentsService {
           appointmentId: id,
           oldStatus: oldStatus,
           newStatus: newStatus,
-          patientId: savedAppointment.patientId,
+          patientProfileId: savedAppointment.patientProfileId,
           consultantId: savedAppointment.consultantId,
         }
       });
@@ -603,7 +671,7 @@ export class AppointmentsService {
     const { startDate, endDate, consultantId } = queryDto;
 
     const queryBuilder = this.appointmentsRepository.createQueryBuilder('appointment')
-      .leftJoinAndSelect('appointment.patient', 'patient')
+      .leftJoinAndSelect('appointment.patientProfile', 'patientProfile')
       .leftJoinAndSelect('appointment.consultant', 'consultant')
       .leftJoinAndSelect('appointment.appointmentType', 'appointmentType')
       .where('appointment.date >= :startDate', { startDate: new Date(startDate) })
@@ -631,11 +699,11 @@ export class AppointmentsService {
 
         return {
             id: app.id,
-            title: `${app.patient?.name || 'N/A'} - ${app.appointmentType?.name || 'N/A'}`,
+            title: `${app.patientProfile?.name || 'N/A'} - ${app.appointmentType?.name || 'N/A'}`,
             start: app.date.toISOString(),
             end: appointmentEnd.toISOString(),
-            patientId: app.patientId,
-            patientName: app.patient?.name || 'N/A',
+            patientProfileId: app.patientProfileId,
+            patientName: app.patientProfile?.name || 'N/A',
             appointmentTypeId: app.appointmentTypeId,
             appointmentTypeName: app.appointmentType?.name || 'N/A',
             consultantId: app.consultantId,
@@ -657,6 +725,126 @@ export class AppointmentsService {
           }
       }
       return diff;
+  }
+
+  async bookAppointment(bookDto: BookAppointmentDto, currentUser: User): Promise<Appointment> {
+    this.logger.log(`User ${currentUser.id} (role: ${currentUser.role}) attempting to book appointment with DTO: ${JSON.stringify(bookDto)}`);
+
+    if (currentUser.role !== UserRole.PATIENT) {
+      throw new ForbiddenException('Only patients can book appointments.');
+    }
+
+    const { consultantId, appointmentTypeId, startAt, notes } = bookDto;
+
+    const patientProfile = await this.patientProfilesRepository.findOne({ where: { userId: currentUser.id } });
+    if (!patientProfile) {
+      throw new NotFoundException(`Patient profile not found for current user (ID: ${currentUser.id}).`);
+    }
+    this.logger.debug(`Patient profile ID ${patientProfile.id} found for user ${currentUser.id}`);
+
+    return this.entityManager.transaction(async transactionalEntityManager => {
+      const consultant = await transactionalEntityManager.findOne(User, {
+        where: { id: consultantId, role: In([UserRole.CONSULTANT, UserRole.ADMIN]) },
+      });
+      if (!consultant) {
+        throw new NotFoundException(`Consultant with ID "${consultantId}" not found or is not a valid consultant.`);
+      }
+      this.logger.debug(`Consultant ID ${consultant.id} found.`);
+
+      const appointmentType = await transactionalEntityManager.findOne(AppointmentType, { where: { id: appointmentTypeId } });
+      if (!appointmentType) {
+        throw new NotFoundException(`Appointment type with ID "${appointmentTypeId}" not found.`);
+      }
+      this.logger.debug(`Appointment type ID ${appointmentType.id} (${appointmentType.name}) found.`);
+
+      const appointmentStartDate = new Date(startAt);
+      if (isNaN(appointmentStartDate.getTime())) {
+          throw new BadRequestException('Invalid startAt date format.');
+      }
+      
+      // TODO: Implement robust slot availability check using workingHoursService
+      // and overlap check for both consultant and patient.
+
+      const appointmentEndDate = new Date(appointmentStartDate);
+      appointmentEndDate.setMinutes(appointmentEndDate.getMinutes() + appointmentType.durationMinutes);
+
+      const conflictingAppointment = await transactionalEntityManager.createQueryBuilder(Appointment, 'app')
+        .leftJoin('app.appointmentType', 'at') // Join with AppointmentType to access durationMinutes
+        .where('app.consultantId = :consultantId', { consultantId })
+        .andWhere('app.status NOT IN (:...cancelledStatuses)', { cancelledStatuses: [AppointmentStatus.CANCELLED, AppointmentStatus.REJECTED] })
+        .andWhere(new Brackets(qb => {
+            // Check for overlap: (new_start < existing_end) AND (existing_start < new_end)
+            // existing_end is calculated as app.date + (at.durationMinutes * interval '1 minute')
+            qb.where(':appointmentStartDate < (app.date + (at.durationMinutes * interval \'1 minute\'))', { 
+                appointmentStartDate // new_start from a variable
+             })
+              .andWhere('app.date < :appointmentEndDate', { 
+                appointmentEndDate // new_end from a variable
+              });
+        }))
+        .getOne();
+
+      if (conflictingAppointment) {
+        this.logger.warn(`Found conflicting appointment ID ${conflictingAppointment.id} for consultant ${consultantId} at ${startAt}`);
+        throw new BadRequestException(
+          `The selected time slot conflicts with an existing appointment for consultant ${consultantId}. Please choose a different time.`,
+        );
+      }
+       const conflictingPatientAppointment = await transactionalEntityManager.createQueryBuilder(Appointment, 'app')
+        .leftJoin('app.appointmentType', 'at') // Join with AppointmentType to access durationMinutes
+        .where('app.patientProfileId = :patientProfileId', { patientProfileId: patientProfile.id })
+        .andWhere('app.status NOT IN (:...cancelledStatuses)', { cancelledStatuses: [AppointmentStatus.CANCELLED, AppointmentStatus.REJECTED] })
+        .andWhere(new Brackets(qb => {
+            // Check for overlap: (new_start < existing_end) AND (existing_start < new_end)
+            // existing_end is calculated as app.date + (at.durationMinutes * interval '1 minute')
+            qb.where(':appointmentStartDate < (app.date + (at.durationMinutes * interval \'1 minute\'))', {
+                appointmentStartDate // new_start from a variable
+             })
+              .andWhere('app.date < :appointmentEndDate', {
+                appointmentEndDate // new_end from a variable
+              });
+        }))
+        .getOne();
+
+      if (conflictingPatientAppointment) {
+         this.logger.warn(`Found conflicting appointment ID ${conflictingPatientAppointment.id} for patient ${patientProfile.id} at ${startAt}`);
+        throw new BadRequestException(
+          `You already have an appointment that conflicts with the selected time slot. Please choose a different time.`,
+        );
+      }
+
+      const newAppointment = transactionalEntityManager.create(Appointment, {
+        patientProfileId: patientProfile.id,
+        consultantId: consultant.id,
+        appointmentTypeId: appointmentType.id,
+        date: appointmentStartDate,
+        endDate: appointmentEndDate,
+        notes: notes,
+        price: appointmentType.price,
+        status: AppointmentStatus.SCHEDULED,
+        createdBy: currentUser.id,
+        updatedBy: currentUser.id,
+      });
+
+      const savedAppointment = await transactionalEntityManager.save(newAppointment);
+      this.logger.log(`New appointment ID ${savedAppointment.id} booked successfully by patient ${patientProfile.id} with consultant ${consultant.id}.`);
+
+      await this.auditLogService.logAction({
+        userId: currentUser.id,
+        userName: currentUser.name, // Assuming User entity has 'name'
+        action: 'APPOINTMENT_BOOKED_BY_PATIENT',
+        details: { 
+          appointmentId: savedAppointment.id,
+          consultantId: savedAppointment.consultantId,
+          patientProfileId: savedAppointment.patientProfileId,
+          appointmentTypeId: savedAppointment.appointmentTypeId,
+          date: savedAppointment.date.toISOString(),
+        },
+        // ipAddress and userAgent can be populated if available from the request
+      });
+
+      return savedAppointment;
+    });
   }
 
   async getTotalRevenueFromCompletedAppointments(): Promise<number> {
