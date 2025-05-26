@@ -20,7 +20,7 @@ cp env.example .env
 ```
 
 Upravte následující proměnné:
-- `POSTGRES_PASSWORD` - Silné heslo pro PostgreSQL
+- `DATABASE_URL` - URL vaší Neon databáze (již předvyplněno)
 - `JWT_SECRET` - Minimálně 32 znaků dlouhý secret key
 - `FRONTEND_DOMAIN` - Vaše doména pro frontend
 - `BACKEND_URL` - URL vašeho backend API
@@ -40,14 +40,6 @@ Upravte následující proměnné:
 
 #### C. Konfigurace služeb
 
-**PostgreSQL Database:**
-1. Přidejte novou službu typu "Database"
-2. Vyberte PostgreSQL 15
-3. Nastavte environment proměnné:
-   - `POSTGRES_DB=nutrition_dashboard`
-   - `POSTGRES_USER=postgres`
-   - `POSTGRES_PASSWORD=<vaše-heslo>`
-
 **Backend API:**
 1. Přidejte novou službu typu "Application"
 2. Nastavte build context na root (`/`)
@@ -56,11 +48,7 @@ Upravte následující proměnné:
 5. Environment proměnné:
    ```
    NODE_ENV=production
-   DATABASE_HOST=postgres
-   DATABASE_PORT=5432
-   DATABASE_NAME=nutrition_dashboard
-   DATABASE_USER=postgres
-   DATABASE_PASSWORD=<vaše-heslo>
+   DATABASE_URL=<vaše-neon-database-url>
    JWT_SECRET=<váš-jwt-secret>
    PORT=3000
    ```
@@ -86,7 +74,7 @@ Upravte následující proměnné:
 
 1. Klikněte na "Deploy" u každé služby
 2. Sledujte logy během build procesu
-3. Služby se spustí v pořadí: Database → Backend → Frontend
+3. Služby se spustí v pořadí: Backend → Frontend
 
 ## 🔧 Lokální testování
 
@@ -106,7 +94,7 @@ docker-compose up -d
 Aplikace bude dostupná na:
 - Frontend: http://localhost:3000
 - Backend: http://localhost:3001
-- PostgreSQL: localhost:5432
+- Database: Neon Cloud (externí)
 
 ## 📊 Monitoring a logy
 
@@ -119,10 +107,10 @@ V Coolify můžete:
 ## 🔒 Bezpečnost
 
 ### Doporučené nastavení:
-1. Použijte silná hesla pro databázi
+1. Neon databáze je již zabezpečená SSL/TLS
 2. JWT secret musí být minimálně 32 znaků
 3. Nastavte HTTPS pro produkci
-4. Omezte přístup k databázi pouze na backend službu
+4. Neon automaticky spravuje přístup k databázi
 
 ### Environment proměnné:
 Nikdy necommitujte skutečné hodnoty do gitu. Použijte Coolify environment management.
@@ -137,9 +125,9 @@ Nikdy necommitujte skutečné hodnoty do gitu. Použijte Coolify environment man
 - Zkontrolujte logy build procesu
 
 **Databáze se nepřipojí:**
-- Ověřte DATABASE_HOST (mělo by být jméno služby)
-- Zkontrolujte hesla a credentials
-- Ujistěte se, že databáze běží před backendem
+- Ověřte DATABASE_URL (Neon connection string)
+- Zkontrolujte, že Neon databáze je dostupná
+- Ujistěte se, že SSL je povoleno (sslmode=require)
 
 **Frontend se nenačte:**
 - Zkontrolujte NUXT_PUBLIC_API_BASE URL
@@ -150,7 +138,7 @@ Nikdy necommitujte skutečné hodnoty do gitu. Použijte Coolify environment man
 
 - První deploy může trvat déle kvůli stahování dependencies
 - Coolify automaticky restartuje služby při změnách v repository
-- Pro produkční použití doporučujeme nastavit backup databáze
+- Neon automaticky zálohuje databázi
 - Monitorujte využití zdrojů a podle potřeby škálujte
 
 ## 🔄 Aktualizace

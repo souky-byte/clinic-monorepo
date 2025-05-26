@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: nutrition-postgres
-    environment:
-      POSTGRES_DB: nutrition_dashboard
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backend API
   backend:
     build:
@@ -27,18 +9,11 @@ services:
     container_name: nutrition-backend
     environment:
       NODE_ENV: production
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: nutrition_dashboard
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      JWT_SECRET: your-jwt-secret-key-here
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_eTQRUoZ2FtG9@ep-curly-scene-a2i7a758-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require}
+      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-here}
       PORT: 3000
     ports:
       - "3001:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
@@ -53,7 +28,7 @@ services:
     container_name: nutrition-frontend
     environment:
       NODE_ENV: production
-      NUXT_PUBLIC_API_BASE: http://backend:3000
+      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://backend:3000}
     ports:
       - "3000:3000"
     depends_on:
@@ -64,9 +39,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-volumes:
-  postgres_data:
 
 networks:
   default:

@@ -84,7 +84,7 @@ deploy-local: docker-build docker-up
 	@echo "Local deployment started!"
 	@echo "Frontend: http://localhost:3000"
 	@echo "Backend: http://localhost:3001"
-	@echo "Database: localhost:5432"
+	@echo "Database: Neon Cloud (external)"
 
 # Cleanup commands
 clean:
@@ -114,21 +114,12 @@ health-check:
 	@echo "Checking frontend health..."
 	@curl -f http://localhost:3000 || echo "Frontend not responding"
 
-# Database commands
-db-reset:
-	docker-compose down postgres
-	docker volume rm nutrition-dashboard_postgres_data || true
-	docker-compose up -d postgres
-
 # Logs
 logs-backend:
 	docker-compose logs -f backend
 
 logs-frontend:
 	docker-compose logs -f frontend
-
-logs-db:
-	docker-compose logs -f postgres
 
 # Production deployment preparation
 prepare-deploy: clean install build
