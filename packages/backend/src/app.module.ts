@@ -12,6 +12,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { ConsultantsModule } from './modules/consultants/consultants.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { WorkingHoursModule } from './working-hours/working-hours.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -36,7 +37,7 @@ import { WorkingHoursModule } from './working-hours/working-hours.module';
     StatisticsModule,
     WorkingHoursModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

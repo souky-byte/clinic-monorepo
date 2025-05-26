@@ -1,0 +1,84 @@
+# Coolify Configuration for Nutrition Dashboard Monorepo
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: nutrition_dashboard
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nutrition-network
+
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: nutrition_dashboard
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - nutrition-network
+    labels:
+      - "coolify.managed=true"
+      - "coolify.name=nutrition-backend"
+      - "coolify.type=application"
+
+  # Frontend Application Service
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+    environment:
+      NODE_ENV: production
+      NUXT_PUBLIC_API_BASE: ${BACKEND_URL:-http://backend:3000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - nutrition-network
+    labels:
+      - "coolify.managed=true"
+      - "coolify.name=nutrition-frontend"
+      - "coolify.type=application"
+      - "coolify.port=3000"
+      - "traefik.enable=true"
+      - "traefik.http.routers.nutrition-frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.nutrition-frontend.tls=true"
+      - "traefik.http.routers.nutrition-frontend.tls.certresolver=letsencrypt"
+
+volumes:
+  postgres_data:
+
+networks:
+  nutrition-network:
+    driver: bridge 
