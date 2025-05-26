@@ -61,13 +61,59 @@
             <template #body="slotProps">
               <div class="flex gap-2 justify-center">
                 <Button icon="pi pi-eye" text rounded severity="info" @click="viewPatient(slotProps.data.id)" v-tooltip.top="'Zobrazit detail'" />
-                <Button v-if="isAdmin" icon="pi pi-trash" text rounded severity="danger" @click="deletePatient(slotProps.data)" v-tooltip.top="'Smazat pacienta'" />
+                <Button icon="pi pi-pencil" text rounded severity="warning" @click="editPatient(slotProps.data.id)" v-tooltip.top="'Upravit pacienta'" />
+                  <Button v-if="isAdmin" icon="pi pi-key" text rounded severity="secondary" @click="openChangePasswordDialog(slotProps.data)" v-tooltip.top="'Změnit heslo'" />
+                  <Button v-if="isAdmin" icon="pi pi-trash" text rounded severity="danger" @click="deletePatient(slotProps.data)" v-tooltip.top="'Smazat pacienta'" />
               </div>
             </template>
           </Column>
         </DataTable>
       </template>
     </Card>
+
+    <!-- Change Password Modal -->
+    <Dialog v-model:visible="changePasswordDialogVisible" header="Změnit heslo pacienta" :modal="true" :style="{ width: '450px' }" @hide="changePasswordSubmitted = false">
+      <div v-if="selectedPatientForPasswordChange" class="formgrid grid pt-3">
+        <div class="field col-12 mb-2">
+          <p class="text-sm text-gray-700">
+            Měníte heslo pro pacienta: 
+            <span class="font-semibold">{{ selectedPatientForPasswordChange.name }}</span>.
+          </p>
+        </div>
+        <div class="field col-12 mb-4">
+          <label for="newPatientPasswordInput" class="block text-sm font-semibold text-gray-800 mb-1.5">Nové heslo <span class="text-red-500">*</span></label>
+          <Password 
+            id="newPatientPasswordInput" 
+            v-model="newPatientPassword" 
+            toggleMask 
+            :feedback="true" 
+            placeholder="Zadejte nové heslo"
+            class="w-full"
+            inputClass="w-full"
+            :class="{'p-invalid': changePasswordSubmitted && !newPatientPassword}"
+          >
+            <template #header>
+              <h6 class="text-sm font-semibold">Vyberte si heslo</h6>
+            </template>
+            <template #footer>
+              <Divider />
+              <p class="mt-2 text-xs text-gray-600">Doporučení:</p>
+              <ul class="pl-3 ml-2 mt-1 text-xs list-disc text-gray-500">
+                  <li>Alespoň jeden malý znak</li>
+                  <li>Alespoň jeden velký znak</li>
+                  <li>Alespoň jedna číslice</li>
+                  <li>Minimálně 8 znaků</li>
+              </ul>
+            </template>
+          </Password>
+          <small v-if="changePasswordSubmitted && !newPatientPassword" class="p-error mt-1">Nové heslo je povinné.</small>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Zrušit" icon="pi pi-times" text @click="changePasswordDialogVisible = false" :disabled="changePasswordLoading"/>
+        <Button label="Uložit nové heslo" icon="pi pi-check" @click="saveNewPatientPassword" :loading="changePasswordLoading" />
+      </template>
+    </Dialog>
 
     <!-- Delete Patient Modal -->
     <Dialog v-model:visible="showDeleteModal" header="Smazat pacienta" :modal="true" :style="{ width: '450px' }">
@@ -163,9 +209,20 @@ const serverOptions = ref({
 
 const firstPageRecord = computed(() => (serverOptions.value.page - 1) * serverOptions.value.rowsPerPage);
 
+function editPatient(patientId: number) {
+  router.push(`/patients/edit/${patientId}`);
+}
+
 
 const showDeleteModal = ref(false);
 const selectedPatient = ref<Patient | null>(null);
+
+// Refs for Change Password Dialog
+const changePasswordDialogVisible = ref(false);
+const selectedPatientForPasswordChange = ref<Patient | null>(null);
+const newPatientPassword = ref('');
+const changePasswordLoading = ref(false);
+const changePasswordSubmitted = ref(false);
 
 const loadFromServer = async () => {
   loading.value = true;
@@ -211,6 +268,43 @@ watch(serverOptions, loadFromServer, { deep: true, immediate: false }); // Remov
 onMounted(() => {
   loadFromServer();
 });
+
+// Methods for Change Password Dialog
+const openChangePasswordDialog = (patient: Patient) => {
+  selectedPatientForPasswordChange.value = { ...patient };
+  newPatientPassword.value = '';
+  changePasswordSubmitted.value = false;
+  changePasswordDialogVisible.value = true;
+};
+
+const saveNewPatientPassword = async () => {
+  changePasswordSubmitted.value = true;
+  if (!newPatientPassword.value) {
+    notificationStore.show({ type: 'error', message: 'Nové heslo nemůže být prázdné.', duration: 3000 });
+    return;
+  }
+  if (!selectedPatientForPasswordChange.value?.id) {
+    notificationStore.show({ type: 'error', message: 'Chybí ID pacienta pro změnu hesla.', duration: 3000 });
+    return;
+  }
+
+  changePasswordLoading.value = true;
+  try {
+    await $api.patch(`/patients/${selectedPatientForPasswordChange.value.id}/change-password`, { newPassword: newPatientPassword.value });
+    notificationStore.show({ 
+      type: 'success', 
+      message: `Heslo pro pacienta ${selectedPatientForPasswordChange.value.name} bylo úspěšně změněno.`, 
+      duration: 4000 
+    });
+    changePasswordDialogVisible.value = false;
+  } catch (error: any) {
+    console.error('Error changing patient password:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Nepodařilo se změnit heslo pacienta.';
+    notificationStore.show({ type: 'error', message: errorMessage, duration: 5000 });
+  } finally {
+    changePasswordLoading.value = false;
+  }
+};
 
 function formatDate(dateString: string | undefined | null) {
   if (!dateString) return '-';

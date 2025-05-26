@@ -6,6 +6,7 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { PatientQueryDto } from './dto/patient-query.dto';
 import { UpdatePatientDto, UpdatePatientProfileDto } from './dto/update-patient.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { Purchase } from '../purchases/entities/purchase.entity';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { AppointmentsService } from '../appointments/appointments.service';
@@ -324,6 +325,78 @@ export class PatientsService {
     };
 
     return this.appointmentsService.findAll(appointmentsQueryDto, currentUser);
+  }
+
+  async changePassword(patientProfileId: number, changePasswordDto: ChangePasswordDto, currentUser: User): Promise<void> {
+    if (currentUser.role !== UserRole.ADMIN) {
+      this.logger.warn(
+        `User ${currentUser.id} (${currentUser.email}) attempted to change password for patient profile ${patientProfileId} without admin rights.`,
+      );
+      throw new ForbiddenException('Only administrators can change patient passwords.');
+    }
+
+    this.logger.log(
+      `Admin ${currentUser.email} (ID: ${currentUser.id}) is attempting to change password for patient profile ID ${patientProfileId}`,
+    );
+
+    const patientProfile = await this.patientProfilesRepository.findOne({
+      where: { id: patientProfileId },
+    });
+
+    if (!patientProfile) {
+      this.logger.warn(`Patient profile with ID "${patientProfileId}" not found.`);
+      throw new NotFoundException(`Patient profile with ID "${patientProfileId}" not found.`);
+    }
+
+    if (!patientProfile.userId) {
+      this.logger.error(
+        `Patient profile ID "${patientProfileId}" does not have an associated user ID. Cannot change password.`,
+      );
+      throw new InternalServerErrorException('Patient profile is not linked to a user account.');
+    }
+
+    try {
+      // Krok 1: Načtení uživatelského účtu pacienta
+      const userToUpdate = await this.usersRepository.findOneBy({ id: patientProfile.userId });
+
+      if (!userToUpdate) {
+        this.logger.error(
+          `User account with ID "${patientProfile.userId}" (associated with patient profile ID "${patientProfileId}") not found.`,
+        );
+        throw new InternalServerErrorException('Associated user account not found for password change.');
+      }
+      
+      // Krok 2: Nastavení nového hesla (hashování proběhne automaticky díky @BeforeUpdate v User entitě)
+      userToUpdate.password = changePasswordDto.newPassword;
+
+      // Krok 3: Uložení změn
+      await this.usersRepository.save(userToUpdate);
+
+      this.logger.log(
+        `Password for user ID "${patientProfile.userId}" (patient profile ID "${patientProfileId}") has been successfully changed by admin ${currentUser.email}.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to update password for user ID "${patientProfile.userId}" (initiated by admin ${currentUser.email}): ${error.message}`,
+        error.stack,
+      );
+      if (error instanceof NotFoundException) { 
+        throw new InternalServerErrorException('Associated user account not found for password change.');
+      }
+      throw new InternalServerErrorException('Error updating password. Please check logs.');
+    }
+
+    this.auditLogService.logAction({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'PATIENT_PASSWORD_CHANGED_BY_ADMIN',
+      details: {
+        targetPatientProfileId: patientProfile.id,
+        targetPatientUserId: patientProfile.userId,
+        adminUserId: currentUser.id,
+        adminEmail: currentUser.email,
+      },
+    });
   }
 
   async getStats(currentUser: User): Promise<PatientStatsDto> {

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Get, Param, Put, Delete, Query } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Get, Param, Put, Delete, Query, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -19,6 +19,7 @@ import { PaginatedPatientsResponseDto } from './dto/paginated-patients-response.
 import { PatientStatsDto } from './dto/patient-stats.dto'; // Import PatientStatsDto
 import { PaginatedPurchasesResponseDto } from './dto/paginated-purchases-response.dto'; // Import PaginatedPurchasesResponseDto
 import { PaginatedAppointmentsResponseDto } from './dto/paginated-appointments-response.dto'; // Import PaginatedAppointmentsResponseDto
+import { ChangePasswordDto } from './dto/change-password.dto'; // Import ChangePasswordDto
 
 @ApiTags('Patients Management')
 @ApiBearerAuth()
@@ -138,5 +139,23 @@ export class PatientsController {
       data,
       meta: { total, page, limit, totalPages },
     };
+  }
+
+  @Patch(':id/change-password')
+  @Roles(UserRole.ADMIN) // Only Admin can change passwords
+  @ApiOperation({ summary: 'Change password for a specific patient (Admin only)' })
+  @ApiParam({ name: 'id', description: 'ID of the patient whose password is to be changed', type: Number })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiOkResponse({ description: 'Patient password changed successfully.' })
+  @ApiNotFoundResponse({ description: 'Patient not found.' })
+  @ApiForbiddenResponse({ description: 'Forbidden. Only admins can change passwords.' })
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changePasswordDto: ChangePasswordDto,
+    @GetUser() currentUser: User,
+  ): Promise<{ message: string }> {
+    await this.patientsService.changePassword(id, changePasswordDto, currentUser);
+    return { message: 'Password changed successfully.' };
   }
 }

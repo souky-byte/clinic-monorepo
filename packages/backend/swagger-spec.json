@@ -1486,6 +1486,52 @@
         ]
       }
     },
+    "/api/patients/{id}/change-password": {
+      "patch": {
+        "operationId": "PatientsController_changePassword",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "ID of the patient whose password is to be changed",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Patient password changed successfully."
+          },
+          "403": {
+            "description": "Forbidden. Only admins can change passwords."
+          },
+          "404": {
+            "description": "Patient not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change password for a specific patient (Admin only)",
+        "tags": [
+          "Patients Management"
+        ]
+      }
+    },
     "/api/purchases": {
       "post": {
         "operationId": "PurchasesController_create",
@@ -2439,7 +2485,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       },
       "get": {
@@ -2451,7 +2497,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       }
     },
@@ -2474,7 +2520,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       },
       "put": {
@@ -2505,7 +2551,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       },
       "delete": {
@@ -2526,7 +2572,91 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
+        ]
+      }
+    },
+    "/api/appointment-types/consultant/{consultantId}": {
+      "get": {
+        "operationId": "AppointmentTypesController_findAllForConsultant",
+        "parameters": [
+          {
+            "name": "consultantId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the consultant whose appointment types are to be fetched",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved appointment types for the consultant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppointmentTypeResponseDto"
+                  },
+                  "example": [
+                    {
+                      "id": 1,
+                      "name": "První konzultace",
+                      "description": "Úvodní sezení pro nové klienty.",
+                      "price": 1500,
+                      "durationMinutes": 60,
+                      "visibleToAll": true,
+                      "color": "#FFD700",
+                      "requiresProducts": false,
+                      "visibleTo": [],
+                      "appointmentsCount": 10,
+                      "createdAt": "2023-01-15T10:00:00.000Z",
+                      "updatedAt": "2023-01-15T10:00:00.000Z",
+                      "version": 1
+                    },
+                    {
+                      "id": 2,
+                      "name": "Kontrolní schůzka",
+                      "description": "Pravidelná kontrola.",
+                      "price": 1000,
+                      "durationMinutes": 45,
+                      "visibleToAll": false,
+                      "color": "#ADD8E6",
+                      "requiresProducts": true,
+                      "visibleTo": [
+                        2
+                      ],
+                      "appointmentsCount": 25,
+                      "createdAt": "2023-01-16T11:00:00.000Z",
+                      "updatedAt": "2023-01-16T11:30:00.000Z",
+                      "version": 1
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Consultant not found or is not a consultant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "message": "Consultant with ID \"999\" not found or is not a consultant.",
+                    "error": "Not Found"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get appointment types visible to a specific consultant (for patients, admins, consultants)",
+        "tags": [
+          "Appointment Types"
         ]
       }
     },
@@ -4570,6 +4700,21 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "description": "Nové heslo pacienta. Musí obsahovat alespoň 8 znaků, jedno velké písmeno, jedno malé písmeno a jedno číslo.",
+            "example": "NewSecureP@ssw0rd",
+            "minLength": 8,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "newPassword"
         ]
       },
       "CreatePurchaseItemDto": {
