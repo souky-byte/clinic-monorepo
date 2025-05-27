@@ -1,0 +1,23 @@
+# Backend Environment Variables
+# Nutrition Dashboard Backend API
+
+# Database Configuration (Neon DB)
+DATABASE_URL=postgresql://neondb_owner:npg_eTQRUoZ2FtG9@ep-curly-scene-a2i7a758-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require
+
+# Authentication
+JWT_SECRET=your-very-secure-jwt-secret-key-at-least-32-characters-long
+
+# Server Configuration
+NODE_ENV=production
+PORT=3000
+
+# CORS Configuration
+CORS_ORIGIN=https://your-frontend-domain.com
+FRONTEND_URL=https://your-frontend-domain.com
+
+# Domain Configuration
+BACKEND_DOMAIN=api.your-domain.com
+
+# Coolify Configuration
+COOLIFY_APP_NAME=nutrition-backend
+COOLIFY_ENVIRONMENT=production 

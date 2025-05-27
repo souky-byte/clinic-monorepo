@@ -1,0 +1,45 @@
+# Coolify Configuration - Backend Only
+# Nutrition Dashboard Backend API
+
+version: "3.8"
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3000
+      # CORS configuration for separate frontend
+      CORS_ORIGIN: ${FRONTEND_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - backend-network
+    labels:
+      - "coolify.managed=true"
+      - "coolify.name=nutrition-backend"
+      - "coolify.type=application"
+      - "coolify.port=3000"
+      - "traefik.enable=true"
+      - "traefik.http.routers.nutrition-backend.rule=Host(`${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.nutrition-backend.tls=true"
+      - "traefik.http.routers.nutrition-backend.tls.certresolver=letsencrypt"
+      # API specific middleware
+      - "traefik.http.routers.nutrition-backend.middlewares=api-cors@docker"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE,PATCH"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolalloworiginlist=${FRONTEND_URL}"
+      - "traefik.http.middlewares.api-cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.api-cors.headers.addvaryheader=true"
+
+networks:
+  backend-network:
+    driver: bridge 
