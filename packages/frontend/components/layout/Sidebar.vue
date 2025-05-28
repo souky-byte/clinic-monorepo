@@ -44,15 +44,6 @@
 
 <script setup lang="ts">
 import { h, computed, ref, watchEffect } from 'vue';
-// Remove Radix imports if no longer used after p-menu integration
-/*
-import {
-  NavigationMenuRoot,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuLink,
-} from 'radix-vue';
-*/
 import { useAuthStore } from '~/stores/auth';
 import Menu from 'primevue/menu';
 import Tooltip from 'primevue/tooltip';
@@ -71,7 +62,7 @@ const route = useRoute();
 
 const navItems = [
   { path: '/dashboard', name: 'Dashboard', iconName: 'pi pi-home', adminOnly: false },
-  { path: '/inventory', name: 'Inventář', iconName: 'pi pi-box', adminOnly: false },
+  { path: '/inventory', name: 'Sklad', iconName: 'pi pi-box', adminOnly: false },
   { path: '/patients', name: 'Pacienti', iconName: 'pi pi-users', adminOnly: false },
   { path: '/appointments', name: 'Schůzky', iconName: 'pi pi-calendar', adminOnly: false },
   { path: '/appointment-types', name: 'Typy schůzek', iconName: 'pi pi-file-edit', adminOnly: true },

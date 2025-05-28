@@ -1,74 +1,66 @@
 <template>
-  <div class="space-y-6">
+  <div class="p-4 md:p-6 space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Přidat nového pacienta</h1>
-      <NuxtLink to="/patients" class="btn btn-secondary">Zpět na seznam</NuxtLink>
+      <h1 class="text-2xl font-semibold text-gray-900">Přidat nového pacienta</h1>
+      <Button label="Zpět na seznam" icon="pi pi-arrow-left" @click="goBack" severity="secondary" outlined />
     </div>
 
-    <div class="card">
-      <form @submit.prevent="addPatient" class="space-y-4 md:space-y-6">
-        <div>
-          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Jméno a příjmení *</label>
-          <input id="name" v-model="newPatientData.name" type="text" required class="input" />
-        </div>
+    <Card class="shadow-md">
+      <template #content>
+        <form @submit.prevent="addPatient" class="space-y-6">
+          <div class="p-fluid grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div class="md:col-span-2">
+              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Jméno a příjmení *</label>
+              <InputText id="name" v-model="newPatientData.name" :invalid="submitted && !newPatientData.name" class="w-full" />
+              <small v-if="submitted && !newPatientData.name" class="p-error">Jméno je povinné.</small>
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input id="email" v-model="newPatientData.email" type="email" class="input" />
-          </div>
-          <div>
-            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input id="phone" v-model="newPatientData.phone" type="tel" class="input" />
-          </div>
-        </div>
-        
-        <div>
-          <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Adresa</label>
-          <textarea id="address" v-model="newPatientData.address" rows="3" class="input"></textarea>
-        </div>
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <InputText id="email" v-model="newPatientData.email" type="email" class="w-full" />
+            </div>
+            <div>
+              <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+              <InputText id="phone" v-model="newPatientData.phone" type="tel" class="w-full" />
+            </div>
+            
+            <div class="md:col-span-2">
+              <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Adresa</label>
+              <Textarea id="address" v-model="newPatientData.address" rows="3" class="w-full" autoResize />
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <div>
-            <label for="dateOfBirth" class="block text-sm font-medium text-gray-700 mb-1">Datum narození</label>
-            <input id="dateOfBirth" v-model="newPatientData.dateOfBirth" type="date" class="input" />
+            <div>
+              <label for="dateOfBirth" class="block text-sm font-medium text-gray-700 mb-1">Datum narození</label>
+              <Calendar id="dateOfBirth" v-model="newPatientData.dateOfBirth" dateFormat="dd.mm.yy" showIcon class="w-full" placeholder="DD.MM.RRRR" :inputClass="'w-full'"/>
+            </div>
+            <div>
+              <label for="consultantId" class="block text-sm font-medium text-gray-700 mb-1">Přiřazený konzultant *</label>
+              <Dropdown 
+                id="consultantId" 
+                v-model="newPatientData.consultantId" 
+                :options="consultantsList" 
+                optionLabel="name" 
+                optionValue="id" 
+                placeholder="Vyberte konzultanta" 
+                class="w-full"
+                :invalid="submitted && newPatientData.consultantId === null"
+              />
+              <small v-if="submitted && newPatientData.consultantId === null" class="p-error">Konzultant je povinný.</small>
+            </div>
           </div>
-          <div>
-            <label for="consultantId" class="block text-sm font-medium text-gray-700 mb-1">Přiřazený konzultant *</label>
-            <SelectRoot v-model="newPatientData.consultantId">
-              <SelectTrigger class="input flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <SelectValue placeholder="Vyberte konzultanta..." />
-                <SelectIcon asChild>
-                  <ChevronDownIcon class="h-4 w-4 opacity-50" />
-                </SelectIcon>
-              </SelectTrigger>
-              <SelectPortal>
-                <SelectContent class="relative z-[60] min-w-[--radix-select-trigger-width] overflow-hidden rounded-md border bg-white text-gray-900 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2" position="popper" :side-offset="5">
-                  <SelectViewport class="max-h-60 p-1">
-                    <SelectItem v-for="consultant in consultantsList" :key="consultant.id" :value="consultant.id.toString()">
-                      <SelectItemText>{{ consultant.name }}</SelectItemText>
-                      <SelectItemIndicator class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                         <CheckIcon class="h-4 w-4" />
-                      </SelectItemIndicator>
-                    </SelectItem>
-                  </SelectViewport>
-                </SelectContent>
-              </SelectPortal>
-            </SelectRoot>
+
+          <div class="md:col-span-2">
+            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Poznámky</label>
+            <Textarea id="notes" v-model="newPatientData.notes" rows="4" class="w-full" autoResize />
           </div>
-        </div>
 
-        <div>
-          <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Poznámky</label>
-          <textarea id="notes" v-model="newPatientData.notes" rows="4" class="input"></textarea>
-        </div>
-
-        <div class="pt-2 flex justify-end space-x-3">
-          <NuxtLink to="/patients" class="btn btn-secondary">Zrušit</NuxtLink>
-          <button type="submit" class="btn btn-primary">Uložit pacienta</button>
-        </div>
-      </form>
-    </div>
+          <div class="pt-4 flex justify-end space-x-3">
+            <Button label="Zrušit" icon="pi pi-times" severity="secondary" text @click="goBack" />
+            <Button type="submit" label="Uložit pacienta" icon="pi pi-check" />
+          </div>
+        </form>
+      </template>
+    </Card>
   </div>
 </template>
 
@@ -77,19 +69,14 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useApiService } from '~/composables/useApiService';
 import { useNotificationStore } from '~/stores/notification';
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
-  SelectIcon,
-  SelectPortal,
-  SelectContent,
-  SelectViewport,
-  SelectItem,
-  SelectItemText,
-  SelectItemIndicator,
-} from 'reka-ui';
-import { CheckIcon, ChevronDownIcon } from '@radix-icons/vue';
+
+// PrimeVue components - auto-imported by nuxt-primevue
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Calendar from 'primevue/calendar';
+import Dropdown from 'primevue/dropdown';
+import Button from 'primevue/button';
+import Card from 'primevue/card';
 
 definePageMeta({
   middleware: 'auth',
@@ -100,8 +87,8 @@ interface CreatePatientDto {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
-  dateOfBirth?: string | null; // Expected format YYYY-MM-DD
-  consultantId: number | null; // Required
+  dateOfBirth?: Date | null; // Changed to Date | null for Calendar v-model
+  consultantId: number | null;
   notes?: string | null;
 }
 
@@ -119,62 +106,83 @@ const newPatientData = reactive<CreatePatientDto>({
   email: null,
   phone: null,
   address: null,
-  dateOfBirth: null,
+  dateOfBirth: null, // Initialize as null, Calendar will provide Date object
   consultantId: null,
   notes: null,
 });
 
+const submitted = ref(false); // For validation feedback
 const consultantsList = ref<Consultant[]>([]);
 
 async function fetchConsultants() {
   try {
-    console.log('[fetchConsultants] Attempting to fetch consultants...');
-    const response = await $api.get('/consultants', { params: { limit: 100 } });
-    console.log('[fetchConsultants] Raw response.data:', JSON.parse(JSON.stringify(response.data)));
-    
+    const response = await $api.get('/consultants', { params: { limit: 100, sortBy: 'name', sortOrder: 'ASC' } });
     let rawConsultantsArray = [];
     if (response.data && Array.isArray(response.data.data)) {
         rawConsultantsArray = response.data.data;
     } else if (response.data && Array.isArray(response.data)) { 
         rawConsultantsArray = response.data;
     }
-
     consultantsList.value = rawConsultantsArray.map((c: any) => ({ id: c.id, name: c.name }));
-    console.log('[fetchConsultants] Processed consultantsList.value:', JSON.parse(JSON.stringify(consultantsList.value)));
-
   } catch (error: any) {
     console.error('[fetchConsultants] Failed to load consultants:', error);
     notificationStore.show({ type: 'error', message: error.response?.data?.message || 'Nepodařilo se načíst konzultanty.' });
   }
 }
 
+function formatDateForAPI(date: Date | string | null): string | null {
+  if (!date) return null;
+  if (typeof date === 'string') { 
+    // if it's from direct input or pre-filled and already a string YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    // If it's DD.MM.YYYY from user input (though Calendar should give Date object)
+    const parts = date.split('.');
+    if (parts.length === 3 && parts.every(p => !isNaN(parseInt(p)))) {
+      // Assuming DD.MM.YYYY
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    // If it's some other string format that the API might accept or needs further specific parsing
+    // For now, we assume Calendar provides a Date object, or it's pre-filled YYYY-MM-DD
+    // If it's an invalid string date format, it might be best to return null or throw an error
+    // depending on desired strictness. Returning null if unparseable seems safer for an API.
+    // However, since Calendar is used, direct string manipulation should be minimal.
+    // The initial type error implies this path might be taken if newPatientData.dateOfBirth was string.
+    // With newPatientData.dateOfBirth as Date | null, this branch is less likely from Calendar.
+    return null; // Or handle as an error / return original string if API is flexible
+  }
+  // It's a Date object from PrimeVue Calendar
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function addPatient() {
+  submitted.value = true; // Trigger validation feedback
+
   if (!newPatientData.name || newPatientData.consultantId === null) {
     notificationStore.show({ type: 'error', message: 'Jméno pacienta a přiřazený konzultant jsou povinná pole.' });
     return;
   }
 
-  // Ensure dateOfBirth is in YYYY-MM-DD format if provided, or null
-  let payloadConsultantId = newPatientData.consultantId !== null ? Number(newPatientData.consultantId) : null;
-  if (payloadConsultantId === null) {
-     notificationStore.show({ type: 'error', message: 'Prosím vyberte konzultanta.' });
-     return;
-  }
-
   const payload = {
     ...newPatientData,
-    consultantId: payloadConsultantId,
-    dateOfBirth: newPatientData.dateOfBirth ? newPatientData.dateOfBirth : null, // Ensure it sends null if empty
+    consultantId: Number(newPatientData.consultantId), // Ensure it's a number
+    dateOfBirth: formatDateForAPI(newPatientData.dateOfBirth || null),
   };
 
   try {
     const response = await $api.post('/patients', payload);
     notificationStore.show({ type: 'success', message: `Pacient ${response.data.name} byl úspěšně vytvořen.` });
-    router.push('/patients'); // Or to `/patients/${response.data.id}` if you want to go to detail
+    router.push('/patients');
   } catch (error: any) {
     console.error('Failed to add patient:', error);
     notificationStore.show({ type: 'error', message: error.response?.data?.message || 'Nepodařilo se přidat pacienta.' });
   }
+}
+
+function goBack() {
+  router.push('/patients');
 }
 
 onMounted(() => {
@@ -184,5 +192,27 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Add any specific styles if needed */
+/* Custom styling for PrimeVue components if needed for a "fakt hezká" look */
+/* For example, to ensure consistent input height if not already handled by PrimeVue/Tailwind */
+:deep(.p-inputtext), 
+:deep(.p-textarea), 
+:deep(.p-calendar .p-inputtext), /* Target input within calendar */
+:deep(.p-dropdown) {
+  /* Example: Adjust height or padding if needed, though PrimeVue defaults are usually good */
+  /* padding-top: 0.625rem; 
+  padding-bottom: 0.625rem; */
+}
+
+:deep(.p-calendar .p-inputtext) {
+    width: 100% !important;
+}
+
+/* Ensure labels and error messages have good contrast and spacing */
+label {
+  margin-bottom: 0.25rem; /* Slightly more space below label */
+}
+.p-error {
+  margin-top: 0.25rem;
+  display: block; /* Ensure it takes its own line */
+}
 </style>

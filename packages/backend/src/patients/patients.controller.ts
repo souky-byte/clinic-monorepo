@@ -1,14 +1,14 @@
-import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Get, Param, Put, Delete, Query } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Get, Param, Put, Delete, Query, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
-import { UpdatePatientDto } from './dto/update-patient.dto';
+import { UpdatePatientProfileDto } from './dto/update-patient.dto';
 import { PatientQueryDto } from './dto/patient-query.dto';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User, UserRole } from '../auth/entities/user.entity';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Patient } from './entities/patient.entity';
+import { PatientProfile } from './entities/patient-profile.entity';
 import { ParseIntPipe } from '@nestjs/common';
 import { Purchase } from '../purchases/entities/purchase.entity';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -19,6 +19,7 @@ import { PaginatedPatientsResponseDto } from './dto/paginated-patients-response.
 import { PatientStatsDto } from './dto/patient-stats.dto'; // Import PatientStatsDto
 import { PaginatedPurchasesResponseDto } from './dto/paginated-purchases-response.dto'; // Import PaginatedPurchasesResponseDto
 import { PaginatedAppointmentsResponseDto } from './dto/paginated-appointments-response.dto'; // Import PaginatedAppointmentsResponseDto
+import { ChangePasswordDto } from './dto/change-password.dto'; // Import ChangePasswordDto
 
 @ApiTags('Patients Management')
 @ApiBearerAuth()
@@ -30,11 +31,11 @@ export class PatientsController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Create a new patient record' })
-  @ApiCreatedResponse({ description: 'Patient created successfully.', type: Patient })
+  @ApiCreatedResponse({ description: 'Patient created successfully.', type: PatientProfile })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   @ApiBody({ type: CreatePatientDto })
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createPatientDto: CreatePatientDto, @GetUser() currentUser: User): Promise<Patient> {
+  create(@Body() createPatientDto: CreatePatientDto, @GetUser() currentUser: User): Promise<PatientProfile> {
     return this.patientsService.create(createPatientDto, currentUser);
   }
 
@@ -67,27 +68,27 @@ export class PatientsController {
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
   @ApiOperation({ summary: 'Get a specific patient by ID (Admin or assigned Consultant)' })
   @ApiParam({ name: 'id', description: 'ID of the patient to retrieve', type: Number })
-  @ApiOkResponse({ description: 'Successfully retrieved patient.', type: Patient })
+  @ApiOkResponse({ description: 'Successfully retrieved patient.', type: PatientProfile })
   @ApiNotFoundResponse({ description: 'Patient not found or not accessible.' })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
-  findOne(@Param('id', ParseIntPipe) id: number, @GetUser() currentUser: User): Promise<Patient> {
+  findOne(@Param('id', ParseIntPipe) id: number, @GetUser() currentUser: User): Promise<PatientProfile> {
     return this.patientsService.findOne(id, currentUser);
   }
 
   @Put(':id')
   @Roles(UserRole.ADMIN, UserRole.CONSULTANT)
-  @ApiOperation({ summary: 'Update an existing patient (Admin or assigned Consultant)' })
-  @ApiParam({ name: 'id', description: 'ID of the patient to update', type: Number })
-  @ApiOkResponse({ description: 'Patient updated successfully.', type: Patient })
-  @ApiNotFoundResponse({ description: 'Patient not found or not accessible.' })
+  @ApiOperation({ summary: 'Update an existing patient profile (Admin or assigned Consultant)' })
+  @ApiParam({ name: 'id', description: 'ID of the patient profile to update', type: Number })
+  @ApiOkResponse({ description: 'Patient profile updated successfully.', type: PatientProfile })
+  @ApiNotFoundResponse({ description: 'Patient profile not found or not accessible.' })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
-  @ApiBody({ type: UpdatePatientDto })
+  @ApiBody({ type: UpdatePatientProfileDto })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updatePatientDto: UpdatePatientDto,
+    @Body() updatePatientProfileDto: UpdatePatientProfileDto,
     @GetUser() currentUser: User,
-  ): Promise<Patient> {
-    return this.patientsService.update(id, updatePatientDto, currentUser);
+  ): Promise<PatientProfile> {
+    return this.patientsService.update(id, updatePatientProfileDto, currentUser);
   }
 
   @Delete(':id')
@@ -138,5 +139,23 @@ export class PatientsController {
       data,
       meta: { total, page, limit, totalPages },
     };
+  }
+
+  @Patch(':id/change-password')
+  @Roles(UserRole.ADMIN) // Only Admin can change passwords
+  @ApiOperation({ summary: 'Change password for a specific patient (Admin only)' })
+  @ApiParam({ name: 'id', description: 'ID of the patient whose password is to be changed', type: Number })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiOkResponse({ description: 'Patient password changed successfully.' })
+  @ApiNotFoundResponse({ description: 'Patient not found.' })
+  @ApiForbiddenResponse({ description: 'Forbidden. Only admins can change passwords.' })
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changePasswordDto: ChangePasswordDto,
+    @GetUser() currentUser: User,
+  ): Promise<{ message: string }> {
+    await this.patientsService.changePassword(id, changePasswordDto, currentUser);
+    return { message: 'Password changed successfully.' };
   }
 }

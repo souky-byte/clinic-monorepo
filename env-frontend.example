@@ -1,0 +1,22 @@
+# Frontend Environment Variables
+# Nutrition Dashboard Frontend Application
+
+# API Configuration
+BACKEND_URL=https://api.your-domain.com
+NUXT_PUBLIC_API_BASE=https://api.your-domain.com
+
+# Application Configuration
+NODE_ENV=production
+NUXT_PUBLIC_APP_NAME=Nutrition Dashboard
+NUXT_PUBLIC_APP_VERSION=1.0.0
+
+# Domain Configuration
+FRONTEND_DOMAIN=your-domain.com
+
+# Coolify Configuration
+COOLIFY_APP_NAME=nutrition-frontend
+COOLIFY_ENVIRONMENT=production
+
+# Optional: Analytics, monitoring, etc.
+# NUXT_PUBLIC_GOOGLE_ANALYTICS_ID=GA-XXXXXXXXX
+# NUXT_PUBLIC_SENTRY_DSN=https://your-sentry-dsn 

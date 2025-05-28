@@ -42,14 +42,14 @@ export class AppointmentQueryDto extends PaginationQueryDto {
   consultantId?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter appointments by patient ID',
+    description: 'Filter appointments by patient profile ID',
     example: 22,
   })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Type(() => Number)
-  patientId?: number;
+  patientProfileId?: number;
 
   @ApiPropertyOptional({
     description: 'Filter appointments by appointment type ID',

@@ -13,7 +13,7 @@ import { ConsultantInventoryVisibilityDto } from './dto/consultant-inventory-vis
 import { AppointmentType } from '../../appointment-types/entities/appointment-type.entity';
 import { ConsultantAppointmentTypeVisibilityDto } from './dto/consultant-appointment-type-visibility.dto';
 import { Appointment, AppointmentStatus } from '../../appointments/entities/appointment.entity';
-import { Patient } from '../../patients/entities/patient.entity';
+import { PatientProfile } from '../../patients/entities/patient-profile.entity';
 import { ConsultantStatsDto } from './dto/consultant-stats.dto';
 
 // DTO pro odpověď
@@ -36,8 +36,8 @@ export class ConsultantsService {
     private appointmentTypesRepository: Repository<AppointmentType>,
     @InjectRepository(Appointment)
     private appointmentsRepository: Repository<Appointment>,
-    @InjectRepository(Patient)
-    private patientsRepository: Repository<Patient>,
+    @InjectRepository(PatientProfile)
+    private patientProfilesRepository: Repository<PatientProfile>,
     @Inject(forwardRef(() => AuthService))
     private authService: AuthService,
     private auditLogService: AuditLogService,
@@ -463,12 +463,12 @@ export class ConsultantsService {
       throw new NotFoundException(`Consultant with ID ${consultantId} not found.`);
     }
 
-    const totalPatients = await this.patientsRepository.count({ where: { consultant: { id: consultantId } } });
+    const totalPatients = await this.patientProfilesRepository.count({ where: { primaryConsultantId: consultantId } });
 
     // Získáváme všechny schůzky konzultanta pro flexibilní filtrování
     const allConsultantAppointments = await this.appointmentsRepository.find({
         where: { consultant: { id: consultantId } },
-        relations: ['appointmentType', 'patient'], // Načteme potřebné relace
+        relations: ['appointmentType', 'patientProfile'], // Načteme potřebné relace
     });
 
     // Filtrujeme relevantní schůzky pro statistiky (např. pouze dokončené)
@@ -501,7 +501,7 @@ export class ConsultantsService {
 
     const recentAppointments = recentAppointmentsData.map(app => ({
       id: app.id,
-      patientName: app.patient?.name || 'N/A',
+      patientName: app.patientProfile?.name || 'N/A',
       date: app.date.toISOString(),
       typeName: app.appointmentType?.name || 'N/A',
     }));

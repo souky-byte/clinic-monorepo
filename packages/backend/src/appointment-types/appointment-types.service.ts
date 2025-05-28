@@ -107,6 +107,36 @@ export class AppointmentTypesService {
     });
   }
 
+  async findAllVisibleToConsultant(consultantId: number): Promise<AppointmentTypeResponseDto[]> {
+    const consultant = await this.usersRepository.findOne({
+      where: { id: consultantId, role: UserRole.CONSULTANT },
+    });
+
+    if (!consultant) {
+      throw new NotFoundException(`Consultant with ID "${consultantId}" not found or is not a consultant.`);
+    }
+
+    let queryBuilder = this.appointmentTypesRepository.createQueryBuilder('appointmentType')
+      .leftJoinAndSelect('appointmentType.visibleToSpecificConsultants', 'visibleConsultants')
+      .loadRelationCountAndMap('appointmentType.appointmentsCount', 'appointmentType.appointments')
+      .where('appointmentType.visibleToAll = :isTrue', { isTrue: true })
+      .orWhere('visibleConsultants.id = :consultantIdParam', { consultantIdParam: consultantId });
+
+    const types = await queryBuilder.getMany();
+
+    return types.map(type => {
+      const visibleTo = type.visibleToSpecificConsultants
+                        ? type.visibleToSpecificConsultants.map(c => c.id)
+                        : [];
+      const { appointments, visibleToSpecificConsultants, ...rest } = type as any;
+      return {
+        ...rest,
+        visibleTo,
+        appointmentsCount: (type as any).appointmentsCount || 0,
+      } as AppointmentTypeResponseDto;
+    });
+  }
+
   async findOne(id: number, currentUser: User): Promise<AppointmentTypeResponseDto> {
     const queryBuilder = this.appointmentTypesRepository.createQueryBuilder('appointmentType')
       .leftJoinAndSelect('appointmentType.visibleToSpecificConsultants', 'visibleConsultants')

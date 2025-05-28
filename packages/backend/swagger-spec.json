@@ -29,6 +29,42 @@
         ]
       }
     },
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2024-01-01T00:00:00.000Z"
+                    },
+                    "uptime": {
+                      "type": "number",
+                      "example": 123.456
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Health check endpoint",
+        "tags": [
+          "Health Check"
+        ]
+      }
+    },
     "/api/auth/create-user": {
       "post": {
         "operationId": "AuthController_createUser",
@@ -83,7 +119,64 @@
         },
         "responses": {
           "200": {
-            "description": "Login successful, returns tokens and user info."
+            "description": "Login successful, returns tokens and user info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhdGllbnQuYWxwaGEuZGV1eEBleGFtcGxlLmNvbSIsInN1YiI6NSwicm9sZSI6InBhdGllbnQiLCJpYXQiOjE3NDY2MjM1MDAsImV4cCI6MTc0NjYyNzEwMH0.abc123def456"
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhdGllbnQuYWxwaGEuZGV1eEBleGFtcGxlLmNvbSIsInN1YiI6NSwiaWF0IjoxNzQ2NjIzNTAwLCJleHAiOjE3NDkyMTU1MDB9.xyz789uvw012"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "number",
+                          "example": 5
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Patient Alpha"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "patient.alpha.deux@example.com"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "patient"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "active"
+                        },
+                        "lastActive": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-05-07T13:05:44.879Z"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-05-06T16:20:51.170Z"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-05-07T11:05:44.931Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Invalid credentials."
@@ -166,7 +259,20 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Successfully logged out."
+            "description": "Successfully logged out.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully logged out"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized."
@@ -192,16 +298,39 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PasswordResetRequestDto"
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "patient.alpha.deux@example.com"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Password reset request processed. A reset link will be sent to the provided email if it exists in the system.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "If your email is registered in our system, you will receive a password reset link."
+                    }
+                  }
+                }
+              }
+            }
           }
         },
+        "summary": "Request a password reset link",
         "tags": [
           "Authentication"
         ]
@@ -216,16 +345,47 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PasswordResetDto"
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "example": "7f58d12e-de3a-4f93-a6c2-90f4920cb2f4"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "example": "newSecurePassword456"
+                  }
+                },
+                "required": [
+                  "token",
+                  "newPassword"
+                ]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Password has been successfully reset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password has been successfully reset."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired reset token."
           }
         },
+        "summary": "Reset password using a valid reset token",
         "tags": [
           "Authentication"
         ]
@@ -787,7 +947,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Patient"
+                  "$ref": "#/components/schemas/PatientProfile"
                 }
               }
             }
@@ -978,7 +1138,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Patient"
+                  "$ref": "#/components/schemas/PatientProfile"
                 }
               }
             }
@@ -1007,7 +1167,7 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID of the patient to update",
+            "description": "ID of the patient profile to update",
             "schema": {
               "type": "number"
             }
@@ -1018,18 +1178,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdatePatientDto"
+                "$ref": "#/components/schemas/UpdatePatientProfileDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Patient updated successfully.",
+            "description": "Patient profile updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Patient"
+                  "$ref": "#/components/schemas/PatientProfile"
                 }
               }
             }
@@ -1038,7 +1198,7 @@
             "description": "Forbidden."
           },
           "404": {
-            "description": "Patient not found or not accessible."
+            "description": "Patient profile not found or not accessible."
           }
         },
         "security": [
@@ -1046,7 +1206,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update an existing patient (Admin or assigned Consultant)",
+        "summary": "Update an existing patient profile (Admin or assigned Consultant)",
         "tags": [
           "Patients Management"
         ]
@@ -1274,9 +1434,11 @@
               "example": "upcoming",
               "type": "string",
               "enum": [
+                "scheduled",
                 "upcoming",
                 "completed",
-                "cancelled"
+                "cancelled",
+                "rejected"
               ]
             }
           },
@@ -1291,10 +1453,10 @@
             }
           },
           {
-            "name": "patientId",
+            "name": "patientProfileId",
             "required": false,
             "in": "query",
-            "description": "Filter appointments by patient ID",
+            "description": "Filter appointments by patient profile ID",
             "schema": {
               "example": 22,
               "type": "number"
@@ -1360,6 +1522,52 @@
         ]
       }
     },
+    "/api/patients/{id}/change-password": {
+      "patch": {
+        "operationId": "PatientsController_changePassword",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "ID of the patient whose password is to be changed",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Patient password changed successfully."
+          },
+          "403": {
+            "description": "Forbidden. Only admins can change passwords."
+          },
+          "404": {
+            "description": "Patient not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change password for a specific patient (Admin only)",
+        "tags": [
+          "Patients Management"
+        ]
+      }
+    },
     "/api/purchases": {
       "post": {
         "operationId": "PurchasesController_create",
@@ -1379,6 +1587,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Purchases"
         ]
@@ -1502,6 +1715,41 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Purchases"
+        ]
+      }
+    },
+    "/api/purchases/me": {
+      "get": {
+        "operationId": "PurchasesController_findMyPurchases",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved patient's purchases.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PatientPurchaseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all purchases for the currently logged-in patient (includes items from appointments)",
         "tags": [
           "Purchases"
         ]
@@ -1525,6 +1773,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Purchases"
         ]
@@ -1652,9 +1905,11 @@
               "example": "upcoming",
               "type": "string",
               "enum": [
+                "scheduled",
                 "upcoming",
                 "completed",
-                "cancelled"
+                "cancelled",
+                "rejected"
               ]
             }
           },
@@ -1669,10 +1924,10 @@
             }
           },
           {
-            "name": "patientId",
+            "name": "patientProfileId",
             "required": false,
             "in": "query",
-            "description": "Filter appointments by patient ID",
+            "description": "Filter appointments by patient profile ID",
             "schema": {
               "example": 22,
               "type": "number"
@@ -1730,6 +1985,46 @@
           }
         ],
         "summary": "Get a paginated list of appointments",
+        "tags": [
+          "Appointments Management"
+        ]
+      }
+    },
+    "/api/appointments/book": {
+      "post": {
+        "operationId": "AppointmentsController_bookAppointmentByPatient",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookAppointmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Appointment booked successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appointment"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an available appointment slot (for patients)",
         "tags": [
           "Appointments Management"
         ]
@@ -1814,6 +2109,178 @@
           }
         ],
         "summary": "[Testing Only] Test validation endpoint",
+        "tags": [
+          "Appointments Management"
+        ]
+      }
+    },
+    "/api/appointments/me": {
+      "get": {
+        "operationId": "AppointmentsController_findMyAppointments",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Field to sort appointments by",
+            "schema": {
+              "default": "date",
+              "example": "date",
+              "type": "string",
+              "enum": [
+                "date",
+                "patient.name",
+                "consultant.name",
+                "appointmentType.name",
+                "status",
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort order",
+            "schema": {
+              "default": "asc",
+              "example": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search term for appointments (e.g., patient name, notes - if implemented in service)",
+            "schema": {
+              "example": "Doe",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter appointments by status",
+            "schema": {
+              "example": "upcoming",
+              "type": "string",
+              "enum": [
+                "scheduled",
+                "upcoming",
+                "completed",
+                "cancelled",
+                "rejected"
+              ]
+            }
+          },
+          {
+            "name": "consultantId",
+            "required": false,
+            "in": "query",
+            "description": "Filter appointments by consultant ID",
+            "schema": {
+              "example": 4,
+              "type": "number"
+            }
+          },
+          {
+            "name": "patientProfileId",
+            "required": false,
+            "in": "query",
+            "description": "Filter appointments by patient profile ID",
+            "schema": {
+              "example": 22,
+              "type": "number"
+            }
+          },
+          {
+            "name": "appointmentTypeId",
+            "required": false,
+            "in": "query",
+            "description": "Filter appointments by appointment type ID",
+            "schema": {
+              "example": 3,
+              "type": "number"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Filter appointments starting on or after this date (YYYY-MM-DD)",
+            "schema": {
+              "example": "2023-12-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "Filter appointments ending on or before this date (YYYY-MM-DD)",
+            "schema": {
+              "example": "2023-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved my appointments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Appointment"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden if profile not found for patient."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get my appointments (for patient or consultant)",
         "tags": [
           "Appointments Management"
         ]
@@ -2054,7 +2521,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       },
       "get": {
@@ -2066,7 +2533,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       }
     },
@@ -2089,7 +2556,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       },
       "put": {
@@ -2120,7 +2587,7 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
         ]
       },
       "delete": {
@@ -2141,7 +2608,365 @@
           }
         },
         "tags": [
-          "AppointmentTypes"
+          "Appointment Types"
+        ]
+      }
+    },
+    "/api/appointment-types/consultant/{consultantId}": {
+      "get": {
+        "operationId": "AppointmentTypesController_findAllForConsultant",
+        "parameters": [
+          {
+            "name": "consultantId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the consultant whose appointment types are to be fetched",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved appointment types for the consultant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppointmentTypeResponseDto"
+                  },
+                  "example": [
+                    {
+                      "id": 1,
+                      "name": "První konzultace",
+                      "description": "Úvodní sezení pro nové klienty.",
+                      "price": 1500,
+                      "durationMinutes": 60,
+                      "visibleToAll": true,
+                      "color": "#FFD700",
+                      "requiresProducts": false,
+                      "visibleTo": [],
+                      "appointmentsCount": 10,
+                      "createdAt": "2023-01-15T10:00:00.000Z",
+                      "updatedAt": "2023-01-15T10:00:00.000Z",
+                      "version": 1
+                    },
+                    {
+                      "id": 2,
+                      "name": "Kontrolní schůzka",
+                      "description": "Pravidelná kontrola.",
+                      "price": 1000,
+                      "durationMinutes": 45,
+                      "visibleToAll": false,
+                      "color": "#ADD8E6",
+                      "requiresProducts": true,
+                      "visibleTo": [
+                        2
+                      ],
+                      "appointmentsCount": 25,
+                      "createdAt": "2023-01-16T11:00:00.000Z",
+                      "updatedAt": "2023-01-16T11:30:00.000Z",
+                      "version": 1
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Consultant not found or is not a consultant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "statusCode": 404,
+                    "message": "Consultant with ID \"999\" not found or is not a consultant.",
+                    "error": "Not Found"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get appointment types visible to a specific consultant (for patients, admins, consultants)",
+        "tags": [
+          "Appointment Types"
+        ]
+      }
+    },
+    "/api/working-hours/me": {
+      "get": {
+        "operationId": "WorkingHoursController_getMyWorkingHours",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved working hours.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingHours"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get working hours for the currently logged-in user",
+        "tags": [
+          "User Working Hours"
+        ]
+      },
+      "put": {
+        "operationId": "WorkingHoursController_setMyWorkingHours",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkingHoursDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Working hours set/updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingHours"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., invalid time format, overlapping intervals)"
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set or update working hours for the currently logged-in user",
+        "tags": [
+          "User Working Hours"
+        ]
+      }
+    },
+    "/api/working-hours/user/{userId}": {
+      "get": {
+        "operationId": "WorkingHoursController_getUserWorkingHours",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the user",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved working hours.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingHours"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden. User is not an Admin."
+          },
+          "404": {
+            "description": "User not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get working hours for a specific user (Admin only)",
+        "tags": [
+          "User Working Hours"
+        ]
+      },
+      "put": {
+        "operationId": "WorkingHoursController_setUserWorkingHours",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the user",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkingHoursDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Working hours set/updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingHours"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., invalid time format, overlapping intervals)"
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden. User is not an Admin."
+          },
+          "404": {
+            "description": "User not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set or update working hours for a specific user (Admin only)",
+        "tags": [
+          "User Working Hours"
+        ]
+      }
+    },
+    "/api/working-hours/user/{userId}/slots": {
+      "get": {
+        "operationId": "WorkingHoursController_getAvailableSlotsForUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the consultant",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "description": "Date for which to find slots, in YYYY-MM-DD format.",
+            "schema": {
+              "example": "2024-07-25",
+              "type": "string"
+            }
+          },
+          {
+            "name": "appointmentTypeId",
+            "required": true,
+            "in": "query",
+            "description": "ID of the appointment type to determine slot duration.",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "timeZone",
+            "required": false,
+            "in": "query",
+            "description": "Optional: Preferred time zone for slot calculation (IANA format). Defaults to system/consultant preferred if not set.",
+            "schema": {
+              "example": "Europe/Prague",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved available slots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SlotDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., invalid date format, missing parameters)"
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          },
+          "404": {
+            "description": "Consultant or AppointmentType not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get available appointment slots for a specific consultant",
+        "tags": [
+          "User Working Hours"
         ]
       }
     },
@@ -2714,7 +3539,8 @@
             "description": "Role of the user",
             "enum": [
               "admin",
-              "consultant"
+              "consultant",
+              "patient"
             ],
             "example": "consultant"
           }
@@ -2749,7 +3575,8 @@
             "description": "User's role",
             "enum": [
               "admin",
-              "consultant"
+              "consultant",
+              "patient"
             ],
             "example": "admin"
           },
@@ -2780,6 +3607,15 @@
             "type": "string",
             "description": "Timestamp of the last update to the user profile",
             "example": "2025-05-07T11:05:44.931Z"
+          },
+          "patientProfile": {
+            "description": "Patient's specific profile data, if user is a patient",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PatientProfile"
+              }
+            ]
           }
         },
         "required": [
@@ -2793,13 +3629,109 @@
           "updatedAt"
         ]
       },
+      "PatientProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the patient profile",
+            "example": 1
+          },
+          "userId": {
+            "type": "number",
+            "description": "ID of the associated user account for this patient profile",
+            "example": 20
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name of the patient (can be different from User name if needed)",
+            "example": "Jana Nováková"
+          },
+          "contactEmail": {
+            "type": "string",
+            "description": "Contact email address for the patient (can be different from User login email)",
+            "example": "kontakt.jana@example.com",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone number of the patient",
+            "example": "777555333",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "description": "Address of the patient",
+            "example": "Dlouhá 1, Praha",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "Date of birth of the patient",
+            "example": "1985-05-15",
+            "format": "date",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes about the patient",
+            "example": "Aktualizované poznámky k Janě.",
+            "nullable": true
+          },
+          "primaryConsultant": {
+            "description": "Primary consultant assigned to this patient profile",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "primaryConsultantId": {
+            "type": "number",
+            "description": "ID of the primary assigned consultant",
+            "example": 2,
+            "nullable": true
+          },
+          "lastVisit": {
+            "type": "string",
+            "description": "Date of the patient's last visit",
+            "example": "2025-05-08",
+            "format": "date",
+            "nullable": true
+          },
+          "totalSpent": {
+            "type": "string",
+            "description": "Total amount spent by the patient (calculated from purchases)",
+            "example": "5825.00"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of profile creation"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of last profile update"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "name",
+          "totalSpent",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "LoginDto": {
         "type": "object",
         "properties": {
           "email": {
             "type": "string",
             "description": "User email for login",
-            "example": "john.doe@example.com"
+            "example": "patient.alpha.deux@example.com"
           },
           "password": {
             "type": "string",
@@ -2818,7 +3750,7 @@
           "refreshToken": {
             "type": "string",
             "description": "Refresh token used to obtain a new access token",
-            "example": "anotherlongrandomstringrefreshtoken67890"
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBhdGllbnQuYWxwaGEuZGV1eEBleGFtcGxlLmNvbSIsInN1YiI6NSwiaWF0IjoxNzQ2NjIzNTAwLCJleHAiOjE3NDkyMTU1MDB9.xyz789uvw012"
           }
         },
         "required": [
@@ -2836,44 +3768,6 @@
         },
         "required": [
           "accessToken"
-        ]
-      },
-      "PasswordResetRequestDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Email address to send password reset link to",
-            "example": "user@example.com"
-          }
-        },
-        "required": [
-          "email"
-        ]
-      },
-      "PasswordResetDto": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "type": "string",
-            "description": "Password reset token received via email",
-            "example": "longrandomstringtoken12345"
-          },
-          "password": {
-            "type": "string",
-            "description": "New password, at least 8 characters long",
-            "example": "newSecurePassword123"
-          },
-          "passwordConfirmation": {
-            "type": "string",
-            "description": "Confirmation of the new password, must match password field",
-            "example": "newSecurePassword123"
-          }
-        },
-        "required": [
-          "token",
-          "password",
-          "passwordConfirmation"
         ]
       },
       "CreateInventoryItemDto": {
@@ -3248,17 +4142,22 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Patient's full name",
+            "description": "Full name for the patient's account and profile",
             "example": "Alice Wonderland"
           },
           "email": {
             "type": "string",
-            "description": "Patient's email address",
-            "example": "alice@example.com"
+            "description": "Login email address for the patient's user account",
+            "example": "alice.patient@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for the patient's user account (min 8 characters)",
+            "example": "AlicePass123!"
           },
           "phone": {
             "type": "string",
-            "description": "Patient's phone number",
+            "description": "Patient's contact phone number",
             "example": "+420123456789"
           },
           "address": {
@@ -3271,10 +4170,11 @@
             "description": "Patient's date of birth in YYYY-MM-DD format",
             "example": "1990-01-01"
           },
-          "consultantId": {
+          "primaryConsultantId": {
             "type": "number",
-            "description": "ID of the consultant assigned to this patient",
-            "example": 1
+            "description": "ID of the primary consultant assigned to this patient (optional at creation)",
+            "example": 1,
+            "nullable": true
           },
           "notes": {
             "type": "string",
@@ -3284,421 +4184,8 @@
         },
         "required": [
           "name",
-          "consultantId"
-        ]
-      },
-      "AppointmentType": {
-        "type": "object",
-        "properties": {}
-      },
-      "AppointmentProductItem": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "Unique identifier for the appointment product item",
-            "example": 1
-          },
-          "inventoryItemId": {
-            "type": "number",
-            "description": "ID of the associated inventory item",
-            "example": 1
-          },
-          "inventoryItem": {
-            "description": "Details of the associated inventory item",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/InventoryItem"
-              }
-            ]
-          },
-          "quantity": {
-            "type": "number",
-            "description": "Quantity of the item for this appointment",
-            "example": 1
-          },
-          "priceAtTimeOfBooking": {
-            "type": "string",
-            "description": "Price of one unit at the time of booking",
-            "example": "250.00"
-          },
-          "vatRateAtTimeOfBooking": {
-            "type": "string",
-            "description": "VAT rate at the time of booking",
-            "example": "10.00"
-          }
-        },
-        "required": [
-          "id",
-          "inventoryItemId",
-          "inventoryItem",
-          "quantity",
-          "priceAtTimeOfBooking",
-          "vatRateAtTimeOfBooking"
-        ]
-      },
-      "Appointment": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "Unique identifier for the appointment",
-            "example": 1
-          },
-          "patientId": {
-            "type": "number",
-            "description": "ID of the patient for this appointment",
-            "example": 1
-          },
-          "patient": {
-            "description": "Patient details",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Patient"
-              }
-            ]
-          },
-          "appointmentTypeId": {
-            "type": "number",
-            "description": "ID of the appointment type",
-            "example": 2
-          },
-          "appointmentType": {
-            "description": "Appointment type details",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AppointmentType"
-              }
-            ]
-          },
-          "consultantId": {
-            "type": "number",
-            "description": "ID of the consultant for this appointment",
-            "example": 2
-          },
-          "consultant": {
-            "description": "Consultant details",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/User"
-              }
-            ]
-          },
-          "date": {
-            "type": "string",
-            "description": "Date and time of the appointment",
-            "example": "2025-05-07T21:30:48.000Z",
-            "format": "date-time"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Notes for the appointment",
-            "example": "Schůzka pro Janu - vitamíny",
-            "nullable": true
-          },
-          "appointmentProducts": {
-            "description": "Products associated with the appointment",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AppointmentProductItem"
-            }
-          },
-          "totalPrice": {
-            "type": "string",
-            "description": "Total price of the appointment including products",
-            "example": "2775.00",
-            "nullable": true
-          },
-          "status": {
-            "type": "string",
-            "description": "Status of the appointment",
-            "enum": [
-              "upcoming",
-              "completed",
-              "cancelled"
-            ],
-            "example": "cancelled"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp of appointment creation",
-            "example": "2025-05-06T17:30:49.008Z"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp of last appointment update",
-            "example": "2025-05-06T17:38:50.265Z"
-          }
-        },
-        "required": [
-          "id",
-          "patientId",
-          "patient",
-          "appointmentTypeId",
-          "appointmentType",
-          "consultantId",
-          "consultant",
-          "date",
-          "appointmentProducts",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "Patient": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "Unique identifier for the patient",
-            "example": 1
-          },
-          "name": {
-            "type": "string",
-            "description": "Full name of the patient",
-            "example": "Jana Nováková"
-          },
-          "email": {
-            "type": "string",
-            "description": "Email address of the patient",
-            "example": "jana.novakova@example.com",
-            "nullable": true
-          },
-          "phone": {
-            "type": "string",
-            "description": "Phone number of the patient",
-            "example": "777555333",
-            "nullable": true
-          },
-          "address": {
-            "type": "string",
-            "description": "Address of the patient",
-            "example": "Dlouhá 1, Praha",
-            "nullable": true
-          },
-          "dateOfBirth": {
-            "type": "string",
-            "description": "Date of birth of the patient",
-            "example": "1985-05-15",
-            "format": "date",
-            "nullable": true
-          },
-          "notes": {
-            "type": "string",
-            "description": "Additional notes about the patient",
-            "example": "Aktualizované poznámky k Janě.",
-            "nullable": true
-          },
-          "consultant": {
-            "description": "Assigned consultant details",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/User"
-              }
-            ]
-          },
-          "consultantId": {
-            "type": "number",
-            "description": "ID of the assigned consultant",
-            "example": 2
-          },
-          "lastVisit": {
-            "type": "string",
-            "description": "Date of the patient's last visit",
-            "example": "2025-05-08",
-            "format": "date",
-            "nullable": true
-          },
-          "totalSpent": {
-            "type": "string",
-            "description": "Total amount spent by the patient",
-            "example": "5825.00"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp of patient creation",
-            "example": "2025-05-06T16:53:27.179Z"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp of last patient update",
-            "example": "2025-05-06T17:30:56.807Z"
-          },
-          "deletedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp when the patient was soft-deleted",
-            "nullable": true,
-            "example": null
-          },
-          "purchases": {
-            "description": "List of purchases made by the patient",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Purchase"
-            }
-          },
-          "appointments": {
-            "description": "List of appointments for the patient",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Appointment"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "consultant",
-          "consultantId",
-          "totalSpent",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "PurchaseItem": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "Unique identifier for the purchase item line",
-            "example": 2
-          },
-          "purchaseId": {
-            "type": "number",
-            "description": "ID of the parent purchase (often redundant if nested)",
-            "example": 2
-          },
-          "inventoryItem": {
-            "description": "Details of the purchased inventory item",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/InventoryItem"
-              }
-            ]
-          },
-          "inventoryItemId": {
-            "type": "number",
-            "description": "ID of the purchased inventory item",
-            "example": 1
-          },
-          "quantity": {
-            "type": "number",
-            "description": "Quantity of the item purchased",
-            "example": 2
-          },
-          "priceAtPurchase": {
-            "type": "string",
-            "description": "Price per unit at the time of purchase",
-            "example": "250.00"
-          },
-          "vatRateAtPurchase": {
-            "type": "string",
-            "description": "VAT rate (%) at the time of purchase",
-            "example": "10.00"
-          },
-          "subTotal": {
-            "type": "string",
-            "description": "Subtotal for this line item (price * quantity with VAT)",
-            "example": "550.00"
-          }
-        },
-        "required": [
-          "id",
-          "inventoryItem",
-          "inventoryItemId",
-          "quantity",
-          "priceAtPurchase",
-          "vatRateAtPurchase",
-          "subTotal"
-        ]
-      },
-      "Purchase": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "Unique identifier for the purchase",
-            "example": 2
-          },
-          "patient": {
-            "description": "Patient who made the purchase",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Patient"
-              }
-            ]
-          },
-          "patientId": {
-            "type": "number",
-            "description": "ID of the patient",
-            "example": 1
-          },
-          "consultant": {
-            "description": "Consultant who recorded the purchase",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/User"
-              }
-            ]
-          },
-          "consultantId": {
-            "type": "number",
-            "description": "ID of the consultant",
-            "example": 2
-          },
-          "items": {
-            "description": "Items included in the purchase",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PurchaseItem"
-            }
-          },
-          "purchaseDate": {
-            "type": "string",
-            "description": "Date of the purchase",
-            "example": "2025-05-06T19:06:36.140Z",
-            "format": "date-time"
-          },
-          "totalAmount": {
-            "type": "string",
-            "description": "Total amount of the purchase",
-            "example": "550.00"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Additional notes for the purchase",
-            "example": "Nákup vitamínu C",
-            "nullable": true
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp of purchase creation",
-            "example": "2025-05-06T17:06:36.036Z"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Timestamp of last purchase update",
-            "example": "2025-05-06T17:06:36.036Z"
-          }
-        },
-        "required": [
-          "id",
-          "patient",
-          "patientId",
-          "consultant",
-          "consultantId",
-          "items",
-          "purchaseDate",
-          "totalAmount",
-          "createdAt",
-          "updatedAt"
+          "email",
+          "password"
         ]
       },
       "TopSpendingPatientDto": {
@@ -3817,7 +4304,7 @@
             "description": "Array of patient records for the current page",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Patient"
+              "$ref": "#/components/schemas/PatientProfile"
             }
           },
           "meta": {
@@ -3829,9 +4316,182 @@
           "meta"
         ]
       },
-      "UpdatePatientDto": {
+      "UpdatePatientProfileDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Patient's full name for the profile",
+            "example": "Alice P. Wonderland"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Patient's contact phone number",
+            "example": "+420987654321"
+          },
+          "address": {
+            "type": "string",
+            "description": "Patient's home address",
+            "example": "456 Looking-Glass Lane, Wonderland"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "Patient's date of birth in YYYY-MM-DD format",
+            "example": "1990-02-14"
+          },
+          "primaryConsultantId": {
+            "type": "number",
+            "description": "ID of the new primary consultant for this patient (Admin only)",
+            "example": 2,
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes about the patient",
+            "example": "Follow-up scheduled."
+          }
+        }
+      },
+      "PurchaseItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the purchase item line",
+            "example": 2
+          },
+          "purchaseId": {
+            "type": "number",
+            "description": "ID of the parent purchase (often redundant if nested)",
+            "example": 2
+          },
+          "inventoryItem": {
+            "description": "Details of the purchased inventory item",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InventoryItem"
+              }
+            ]
+          },
+          "inventoryItemId": {
+            "type": "number",
+            "description": "ID of the purchased inventory item",
+            "example": 1
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of the item purchased",
+            "example": 2
+          },
+          "priceAtPurchase": {
+            "type": "string",
+            "description": "Price per unit at the time of purchase",
+            "example": "250.00"
+          },
+          "vatRateAtPurchase": {
+            "type": "string",
+            "description": "VAT rate (%) at the time of purchase",
+            "example": "10.00"
+          },
+          "subTotal": {
+            "type": "string",
+            "description": "Subtotal for this line item (price * quantity with VAT)",
+            "example": "550.00"
+          }
+        },
+        "required": [
+          "id",
+          "inventoryItem",
+          "inventoryItemId",
+          "quantity",
+          "priceAtPurchase",
+          "vatRateAtPurchase",
+          "subTotal"
+        ]
+      },
+      "Purchase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the purchase",
+            "example": 2
+          },
+          "patientProfile": {
+            "description": "Patient profile who made the purchase",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PatientProfile"
+              }
+            ]
+          },
+          "patientProfileId": {
+            "type": "number",
+            "description": "ID of the patient profile",
+            "example": 1
+          },
+          "consultant": {
+            "description": "Consultant who recorded the purchase",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "consultantId": {
+            "type": "number",
+            "description": "ID of the consultant",
+            "example": 2
+          },
+          "items": {
+            "description": "Items included in the purchase",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseItem"
+            }
+          },
+          "purchaseDate": {
+            "type": "string",
+            "description": "Date of the purchase",
+            "example": "2025-05-06T19:06:36.140Z",
+            "format": "date-time"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Total amount of the purchase",
+            "example": "550.00"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes for the purchase",
+            "example": "Nákup vitamínu C",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of purchase creation",
+            "example": "2025-05-06T17:06:36.036Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of last purchase update",
+            "example": "2025-05-06T17:06:36.036Z"
+          }
+        },
+        "required": [
+          "id",
+          "patientProfile",
+          "patientProfileId",
+          "consultant",
+          "consultantId",
+          "items",
+          "purchaseDate",
+          "totalAmount",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "PaginatedPurchasesResponseDto": {
         "type": "object",
@@ -3874,6 +4534,168 @@
           "meta"
         ]
       },
+      "AppointmentType": {
+        "type": "object",
+        "properties": {}
+      },
+      "AppointmentProductItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the appointment product item",
+            "example": 1
+          },
+          "inventoryItemId": {
+            "type": "number",
+            "description": "ID of the associated inventory item",
+            "example": 1
+          },
+          "inventoryItem": {
+            "description": "Details of the associated inventory item",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InventoryItem"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of the item for this appointment",
+            "example": 1
+          },
+          "priceAtTimeOfBooking": {
+            "type": "string",
+            "description": "Price of one unit at the time of booking",
+            "example": "250.00"
+          },
+          "vatRateAtTimeOfBooking": {
+            "type": "string",
+            "description": "VAT rate at the time of booking",
+            "example": "10.00"
+          }
+        },
+        "required": [
+          "id",
+          "inventoryItemId",
+          "inventoryItem",
+          "quantity",
+          "priceAtTimeOfBooking",
+          "vatRateAtTimeOfBooking"
+        ]
+      },
+      "Appointment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the appointment",
+            "example": 1
+          },
+          "patientProfileId": {
+            "type": "number",
+            "description": "ID of the patient for this appointment",
+            "example": 1
+          },
+          "patientProfile": {
+            "description": "Patient profile details",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PatientProfile"
+              }
+            ]
+          },
+          "appointmentTypeId": {
+            "type": "number",
+            "description": "ID of the appointment type",
+            "example": 2
+          },
+          "appointmentType": {
+            "description": "Appointment type details",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppointmentType"
+              }
+            ]
+          },
+          "consultantId": {
+            "type": "number",
+            "description": "ID of the consultant for this appointment",
+            "example": 2
+          },
+          "consultant": {
+            "description": "Consultant details",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "date": {
+            "type": "string",
+            "description": "Date and time of the appointment",
+            "example": "2025-05-07T21:30:48.000Z",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes for the appointment",
+            "example": "Schůzka pro Janu - vitamíny",
+            "nullable": true
+          },
+          "appointmentProducts": {
+            "description": "Products associated with the appointment",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentProductItem"
+            }
+          },
+          "totalPrice": {
+            "type": "string",
+            "description": "Total price of the appointment including products",
+            "example": "2775.00",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "Status of the appointment",
+            "enum": [
+              "scheduled",
+              "upcoming",
+              "completed",
+              "cancelled",
+              "rejected"
+            ],
+            "example": "cancelled"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of appointment creation",
+            "example": "2025-05-06T17:30:49.008Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of last appointment update",
+            "example": "2025-05-06T17:38:50.265Z"
+          }
+        },
+        "required": [
+          "id",
+          "patientProfileId",
+          "patientProfile",
+          "appointmentTypeId",
+          "appointmentType",
+          "consultantId",
+          "consultant",
+          "date",
+          "appointmentProducts",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "PaginatedAppointmentsResponseDto": {
         "type": "object",
         "properties": {
@@ -3914,6 +4736,21 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "description": "Nové heslo pacienta. Musí obsahovat alespoň 8 znaků, jedno velké písmeno, jedno malé písmeno a jedno číslo.",
+            "example": "NewSecureP@ssw0rd",
+            "minLength": 8,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "newPassword"
         ]
       },
       "CreatePurchaseItemDto": {
@@ -3973,6 +4810,68 @@
           "items"
         ]
       },
+      "PatientPurchaseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the purchase record (either Purchase ID or AppointmentProductItem ID)",
+            "example": 1
+          },
+          "sourceType": {
+            "type": "string",
+            "description": "Indicates the source of the purchase",
+            "enum": [
+              "purchase",
+              "appointment"
+            ],
+            "example": "purchase"
+          },
+          "sourceId": {
+            "type": "number",
+            "description": "Identifier of the source entity (Purchase ID or Appointment ID)",
+            "example": 101
+          },
+          "date": {
+            "type": "string",
+            "description": "Date of the purchase or appointment",
+            "example": "2023-05-20T10:00:00.000Z"
+          },
+          "inventoryItem": {
+            "description": "Details of the purchased inventory item",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InventoryItem"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of the item purchased",
+            "example": 2
+          },
+          "price": {
+            "type": "string",
+            "description": "Price per unit at the time of purchase/booking",
+            "example": "150.00"
+          },
+          "vatRate": {
+            "type": "string",
+            "description": "VAT rate at the time of purchase/booking",
+            "example": "21.00"
+          }
+        },
+        "required": [
+          "id",
+          "sourceType",
+          "sourceId",
+          "date",
+          "inventoryItem",
+          "quantity",
+          "price",
+          "vatRate"
+        ]
+      },
       "AppointmentProductItemDto": {
         "type": "object",
         "properties": {
@@ -4020,6 +4919,19 @@
             "description": "Date and time of the appointment in ISO 8601 format",
             "example": "2023-11-15T14:30:00.000Z"
           },
+          "status": {
+            "type": "string",
+            "description": "Status of the appointment",
+            "enum": [
+              "scheduled",
+              "upcoming",
+              "completed",
+              "cancelled",
+              "rejected"
+            ],
+            "default": "upcoming",
+            "example": "completed"
+          },
           "notes": {
             "type": "string",
             "description": "Optional notes for the appointment",
@@ -4050,6 +4962,36 @@
           "date"
         ]
       },
+      "BookAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "consultantId": {
+            "type": "number",
+            "description": "ID of the consultant for the appointment.",
+            "example": 1
+          },
+          "appointmentTypeId": {
+            "type": "number",
+            "description": "ID of the appointment type.",
+            "example": 1
+          },
+          "startAt": {
+            "type": "string",
+            "description": "Start date and time of the appointment in ISO 8601 format (UTC).",
+            "example": "2024-07-25T10:00:00.000Z"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes for the appointment.",
+            "example": "Discussing recent lab results."
+          }
+        },
+        "required": [
+          "consultantId",
+          "appointmentTypeId",
+          "startAt"
+        ]
+      },
       "CalendarAppointmentItemDto": {
         "type": "object",
         "properties": {
@@ -4073,9 +5015,9 @@
             "description": "End date and time of the appointment in ISO 8601 format",
             "example": "2023-12-20T11:00:00.000Z"
           },
-          "patientId": {
+          "patientProfileId": {
             "type": "number",
-            "description": "ID of the patient",
+            "description": "ID of the patient profile",
             "example": 15
           },
           "patientName": {
@@ -4107,9 +5049,11 @@
             "type": "string",
             "description": "Status of the appointment",
             "enum": [
+              "scheduled",
               "upcoming",
               "completed",
-              "cancelled"
+              "cancelled",
+              "rejected"
             ],
             "example": "upcoming"
           }
@@ -4119,7 +5063,7 @@
           "title",
           "start",
           "end",
-          "patientId",
+          "patientProfileId",
           "patientName",
           "appointmentTypeId",
           "appointmentTypeName",
@@ -4139,9 +5083,11 @@
             "type": "string",
             "description": "The new status for the appointment",
             "enum": [
+              "scheduled",
               "upcoming",
               "completed",
-              "cancelled"
+              "cancelled",
+              "rejected"
             ],
             "example": "cancelled"
           }
@@ -4203,6 +5149,152 @@
         "type": "object",
         "properties": {}
       },
+      "WorkingHours": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier for the working hours entry",
+            "example": 1
+          },
+          "userId": {
+            "type": "number",
+            "description": "ID of the user (consultant/admin) these working hours belong to",
+            "example": 1
+          },
+          "dayOfWeek": {
+            "type": "string",
+            "description": "Day of the week",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "example": "MONDAY"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Start time of the working interval",
+            "example": "09:00",
+            "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$ C"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "End time of the working interval",
+            "example": "17:00",
+            "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$ C"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of creation"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of last update"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "WorkingHoursEntryDto": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": {
+            "type": "string",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "example": "MONDAY"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Start time in HH:mm format",
+            "example": "09:00",
+            "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "End time in HH:mm format",
+            "example": "17:30",
+            "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+          }
+        },
+        "required": [
+          "dayOfWeek",
+          "startTime",
+          "endTime"
+        ]
+      },
+      "CreateWorkingHoursDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "description": "An array of working hours entries for different days/times. Replaces all existing working hours for the user.",
+            "example": [
+              {
+                "dayOfWeek": "MONDAY",
+                "startTime": "09:00",
+                "endTime": "12:30"
+              },
+              {
+                "dayOfWeek": "MONDAY",
+                "startTime": "13:30",
+                "endTime": "17:00"
+              },
+              {
+                "dayOfWeek": "TUESDAY",
+                "startTime": "10:00",
+                "endTime": "16:00"
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingHoursEntryDto"
+            }
+          }
+        },
+        "required": [
+          "entries"
+        ]
+      },
+      "SlotDto": {
+        "type": "object",
+        "properties": {
+          "startAt": {
+            "type": "string",
+            "description": "Start time of the available slot in ISO 8601 format.",
+            "example": "2024-07-25T09:00:00.000Z"
+          },
+          "endAt": {
+            "type": "string",
+            "description": "End time of the available slot in ISO 8601 format.",
+            "example": "2024-07-25T09:30:00.000Z"
+          }
+        },
+        "required": [
+          "startAt",
+          "endAt"
+        ]
+      },
       "CreateConsultantDto": {
         "type": "object",
         "properties": {
@@ -4225,7 +5317,8 @@
             "type": "string",
             "enum": [
               "admin",
-              "consultant"
+              "consultant",
+              "patient"
             ],
             "description": "Role of the user. For this endpoint, typically 'consultant' or 'admin'.",
             "example": "consultant"
@@ -4255,7 +5348,8 @@
             "type": "string",
             "enum": [
               "admin",
-              "consultant"
+              "consultant",
+              "patient"
             ],
             "description": "Role of the user",
             "example": "consultant"

@@ -5,9 +5,11 @@ import { Purchase } from './entities/purchase.entity';
 import { PurchaseItem } from './entities/purchase-item.entity';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { User, UserRole } from '../auth/entities/user.entity';
-import { Patient } from '../patients/entities/patient.entity';
+import { PatientProfile } from '../patients/entities/patient-profile.entity';
 import { InventoryItem } from '../inventory/entities/inventory-item.entity';
 import { PurchaseQueryDto, PurchaseSortBy } from './dto/purchase-query.dto';
+import { PatientPurchaseDto } from './dto/patient-purchase.dto';
+import { AppointmentProductItem } from '../appointments/entities/appointment-product-item.entity';
 import { AuditLogService } from '../modules/audit-log/audit-log.service';
 // PatientsService a InventoryService zde nebudeme přímo injectovat, raději použijeme přímo jejich repositories,
 // abychom se vyhnuli možným cyklickým závislostem na úrovni služeb, pokud by to bylo složité.
@@ -22,21 +24,23 @@ export class PurchasesService {
     private purchasesRepository: Repository<Purchase>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    @InjectRepository(Patient)
-    private patientsRepository: Repository<Patient>,
+    @InjectRepository(PatientProfile)
+    private patientProfilesRepository: Repository<PatientProfile>,
     @InjectRepository(InventoryItem)
     private inventoryItemsRepository: Repository<InventoryItem>,
     private entityManager: EntityManager, 
     private auditLogService: AuditLogService,
+    @InjectRepository(AppointmentProductItem)
+    private appointmentProductItemRepository: Repository<AppointmentProductItem>,
   ) {}
 
   async create(createPurchaseDto: CreatePurchaseDto, currentUser: User): Promise<Purchase> {
     return this.entityManager.transaction(async transactionalEntityManager => {
       const { patientId, consultantId, purchaseDate, items: purchaseItemsDto, notes } = createPurchaseDto;
 
-      const patient = await transactionalEntityManager.findOne(Patient, { where: { id: patientId } });
-      if (!patient) {
-        throw new NotFoundException(`Patient with ID "${patientId}" not found.`);
+      const patientProfile = await transactionalEntityManager.findOne(PatientProfile, { where: { id: patientId } });
+      if (!patientProfile) {
+        throw new NotFoundException(`Patient profile with ID "${patientId}" not found.`);
       }
 
       let recordingConsultant = currentUser;
@@ -87,7 +91,7 @@ export class PurchasesService {
       }
 
       const newPurchase = transactionalEntityManager.create(Purchase, {
-        patientId: patient.id,
+        patientProfileId: patientProfile.id,
         consultantId: recordingConsultant.id,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
         items: purchaseItemsToSave, 
@@ -97,8 +101,9 @@ export class PurchasesService {
 
       const savedPurchase = await transactionalEntityManager.save(Purchase, newPurchase);
       
-      patient.totalSpent = parseFloat((Number(patient.totalSpent) + savedPurchase.totalAmount).toFixed(2));
-      await transactionalEntityManager.save(Patient, patient);
+      const fullPatientProfile = await transactionalEntityManager.findOneOrFail(PatientProfile, { where: { id: patientProfile.id } });
+      fullPatientProfile.totalSpent = parseFloat((Number(fullPatientProfile.totalSpent) + savedPurchase.totalAmount).toFixed(2));
+      await transactionalEntityManager.save(PatientProfile, fullPatientProfile);
     
       this.auditLogService.logAction({
           userId: currentUser.id, 
@@ -106,8 +111,8 @@ export class PurchasesService {
           action: 'PURCHASE_CREATED',
           details: { 
             purchaseId: savedPurchase.id, 
-            patientId: patient.id, 
-            patientName: patient.name,
+            patientProfileId: fullPatientProfile.id, 
+            patientName: fullPatientProfile.name,
             consultantId: recordingConsultant.id, 
             consultantName: recordingConsultant.name,
             totalAmount: savedPurchase.totalAmount,
@@ -117,7 +122,7 @@ export class PurchasesService {
 
       const resultPurchase = await transactionalEntityManager.findOne(Purchase, {
         where: { id: savedPurchase.id },
-        relations: ['patient', 'consultant', 'items', 'items.inventoryItem'], 
+        relations: ['patientProfile', 'consultant', 'items', 'items.inventoryItem'], 
       });
        if (!resultPurchase) { 
           this.logger.error(`Failed to re-fetch purchase with ID ${savedPurchase.id} after saving in transaction.`);
@@ -139,7 +144,7 @@ export class PurchasesService {
   async findOne(id: number, currentUser: User): Promise<Purchase> {
     const purchase = await this.purchasesRepository.findOne({
       where: { id },
-      relations: ['patient', 'consultant', 'items', 'items.inventoryItem'],
+      relations: ['patientProfile', 'consultant', 'items', 'items.inventoryItem'],
     });
 
     if (!purchase) {
@@ -148,7 +153,7 @@ export class PurchasesService {
 
     if (currentUser.role === UserRole.CONSULTANT) {
       if (purchase.consultantId !== currentUser.id) {
-         const patientOfPurchase = await this.patientsRepository.findOne({where: {id: purchase.patientId, consultantId: currentUser.id}});
+         const patientOfPurchase = await this.patientProfilesRepository.findOne({where: {id: purchase.patientProfileId, primaryConsultantId: currentUser.id}});
          if (!patientOfPurchase) {
             throw new ForbiddenException('You do not have permission to view this purchase.');
          }
@@ -175,7 +180,7 @@ export class PurchasesService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.purchasesRepository.createQueryBuilder('purchase')
-      .leftJoinAndSelect('purchase.patient', 'patient')
+      .leftJoinAndSelect('purchase.patientProfile', 'patientProfile')
       .leftJoinAndSelect('purchase.consultant', 'consultant')
       .leftJoinAndSelect('purchase.items', 'purchaseItem')
       .leftJoinAndSelect('purchaseItem.inventoryItem', 'inventoryItem');
@@ -183,7 +188,7 @@ export class PurchasesService {
     if (currentUser.role === UserRole.CONSULTANT) {
       queryBuilder.where(new Brackets(qb => {
         qb.where('purchase.consultantId = :currentUserId', { currentUserId: currentUser.id })
-          .orWhere('patient.consultantId = :currentUserIdForPatient', { currentUserIdForPatient: currentUser.id });
+          .orWhere('patientProfile.primaryConsultantId = :currentUserIdForPatient', { currentUserIdForPatient: currentUser.id });
       }));
     } else if (currentUser.role === UserRole.ADMIN && consultantId) {
       queryBuilder.where('purchase.consultantId = :filterConsultantId', { filterConsultantId: consultantId });
@@ -191,16 +196,16 @@ export class PurchasesService {
     
     if (patientId) {
         if (queryBuilder.expressionMap.wheres.length > 0) {
-            queryBuilder.andWhere('purchase.patientId = :patientIdParam', { patientIdParam: patientId });
+            queryBuilder.andWhere('purchase.patientProfileId = :patientIdParam', { patientIdParam: patientId });
         } else {
-            queryBuilder.where('purchase.patientId = :patientIdParam', { patientIdParam: patientId });
+            queryBuilder.where('purchase.patientProfileId = :patientIdParam', { patientIdParam: patientId });
         }
     }
 
     if (search) {
       const searchCondition = new Brackets(qb => {
-        qb.where('patient.name ILIKE :search', { search: `%${search}%` })
-          .orWhere('patient.email ILIKE :search', { search: `%${search}%` })
+        qb.where('patientProfile.name ILIKE :search', { search: `%${search}%` })
+          .orWhere('patientProfile.contactEmail ILIKE :search', { search: `%${search}%` })
           .orWhere('consultant.name ILIKE :search', { search: `%${search}%` })
           .orWhere('inventoryItem.name ILIKE :search', { search: `%${search}%` })
           .orWhere('purchase.notes ILIKE :search', { search: `%${search}%` });
@@ -225,7 +230,7 @@ export class PurchasesService {
       [PurchaseSortBy.PURCHASE_DATE]: 'purchase.purchaseDate',
       [PurchaseSortBy.TOTAL_AMOUNT]: 'purchase.totalAmount',
       [PurchaseSortBy.CREATED_AT]: 'purchase.createdAt',
-      [PurchaseSortBy.PATIENT_NAME]: 'patient.name',
+      [PurchaseSortBy.PATIENT_NAME]: 'patientProfile.name',
       [PurchaseSortBy.CONSULTANT_NAME]: 'consultant.name',
     };
     const safeSortBy = validSortByFields[sortBy] || 'purchase.purchaseDate';
@@ -257,5 +262,76 @@ export class PurchasesService {
       this.logger.error(`Failed to get total purchase revenue: ${(error as Error).message}`, (error as Error).stack);
       throw new InternalServerErrorException('Error calculating total purchase revenue.');
     }
+  }
+
+  async findMyPurchases(currentUser: User): Promise<PatientPurchaseDto[]> {
+    this.logger.debug(`Fetching all purchases for user ID: ${currentUser.id}`);
+    const patientProfile = await this.patientProfilesRepository.findOne({ where: { userId: currentUser.id } });
+
+    if (!patientProfile) {
+      this.logger.warn(`No patient profile found for user ID ${currentUser.id}. Returning empty array for their purchases.`);
+      return [];
+    }
+
+    const patientPurchases: PatientPurchaseDto[] = [];
+
+    // 1. Get standard purchases
+    const standardPurchases = await this.purchasesRepository.find({
+      where: { patientProfileId: patientProfile.id },
+      relations: ['items', 'items.inventoryItem'], // Ensure items and their inventoryItem are loaded
+      order: { purchaseDate: 'DESC' }, // Already ordered, but we'll sort combined list later
+    });
+
+    for (const purchase of standardPurchases) {
+      for (const item of purchase.items) {
+        if (item.inventoryItem) { // Ensure inventoryItem is loaded and exists
+          patientPurchases.push({
+            id: item.id, // Using purchaseItem.id for the unique ID for this record
+            sourceType: 'purchase',
+            sourceId: purchase.id,
+            date: purchase.purchaseDate.toISOString(),
+            inventoryItem: item.inventoryItem,
+            quantity: item.quantity,
+            price: item.priceAtPurchase.toString(), 
+            vatRate: item.vatRateAtPurchase.toString(),
+          });
+        }
+      }
+    }
+
+    // 2. Get purchases from appointments
+    const appointmentProductItems = await this.appointmentProductItemRepository.createQueryBuilder('api')
+      .innerJoin('api.appointment', 'appointment', 'appointment.patientProfileId = :patientProfileId', { patientProfileId: patientProfile.id })
+      .leftJoinAndSelect('api.inventoryItem', 'inventoryItem')
+      .select([
+        'api.id', 
+        'appointment.id', 
+        'appointment.date', 
+        'inventoryItem',
+        'api.quantity',
+        'api.priceAtTimeOfBooking', 
+        'api.vatRateAtTimeOfBooking'
+      ])
+      .getMany();
+
+    for (const apItem of appointmentProductItems) {
+      if (apItem.inventoryItem) { // Ensure inventoryItem is loaded and exists
+        patientPurchases.push({
+          id: apItem.id, // Using appointmentProductItem.id as the unique ID for this record
+          sourceType: 'appointment',
+          sourceId: apItem.appointment.id, // sourceId is the appointment's ID
+          date: new Date(apItem.appointment.date).toISOString(), // Ensure date is in ISO string format
+          inventoryItem: apItem.inventoryItem,
+          quantity: apItem.quantity,
+          price: apItem.priceAtTimeOfBooking.toString(),
+          vatRate: apItem.vatRateAtTimeOfBooking.toString(),
+        });
+      }
+    }
+
+    // 3. Sort all combined purchases by date descending
+    patientPurchases.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return patientPurchases;
   }
 }
