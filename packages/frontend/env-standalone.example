@@ -1,0 +1,52 @@
+# ==============================================
+# NUTRITION DASHBOARD FRONTEND CONFIGURATION
+# ==============================================
+# Standalone Environment Variables Template
+# Copy this file to .env and fill in your values
+
+# ==============================================
+# API CONFIGURATION
+# ==============================================
+# Backend API URL (where your NestJS backend is running)
+API_BASE_URL=http://localhost:3000
+
+# ==============================================
+# DEVELOPMENT CONFIGURATION
+# ==============================================
+# Environment mode
+NODE_ENV=development
+
+# Server configuration
+NUXT_HOST=0.0.0.0
+NUXT_PORT=3001
+
+# ==============================================
+# OPTIONAL: SSL CONFIGURATION
+# ==============================================
+# Uncomment and set paths for HTTPS in development
+# NUXT_SSL_CERT=/path/to/certificate.crt
+# NUXT_SSL_KEY=/path/to/private.key
+
+# ==============================================
+# OPTIONAL: BUILD CONFIGURATION
+# ==============================================
+# Build optimization
+# NITRO_PRESET=node-server
+# NUXT_TELEMETRY_DISABLED=1
+
+# ==============================================
+# OPTIONAL: DEPLOYMENT CONFIGURATION
+# ==============================================
+# Base URL for static deployment (e.g., GitHub Pages)
+# NUXT_APP_BASE_URL=/nutrition-dashboard/
+
+# CDN configuration
+# NUXT_APP_CDN_URL=https://cdn.example.com
+
+# ==============================================
+# NOTES:
+# ==============================================
+# 1. Make sure API_BASE_URL matches your backend URL
+# 2. For production, use HTTPS URLs
+# 3. Backend must have CORS configured for frontend URL
+# 4. Port 3001 is default for frontend, 3000 for backend 

@@ -30,6 +30,12 @@ help:
 	@echo "  docker-backend-logs - Show backend Docker logs"
 	@echo "  docker-frontend-logs- Show frontend Docker logs"
 	@echo ""
+	@echo "Standalone Deployment:"
+	@echo "  setup-standalone-backend  - Prepare backend for standalone deployment"
+	@echo "  setup-standalone-frontend - Prepare frontend for standalone deployment"
+	@echo "  standalone-backend-install - Install standalone backend dependencies"
+	@echo "  standalone-frontend-install- Install standalone frontend dependencies"
+	@echo ""
 	@echo "Testing:"
 	@echo "  test          - Run all tests"
 	@echo "  test-backend  - Run backend tests"
@@ -107,6 +113,58 @@ docker-frontend-logs:
 docker-frontend-build:
 	docker-compose -f docker-compose.frontend.yml build
 
+# Standalone deployment commands
+setup-standalone-backend:
+	@echo "Setting up standalone backend..."
+	@if [ ! -d "../nutrition-backend" ]; then \
+		cp -r packages/backend ../nutrition-backend; \
+		cd ../nutrition-backend && \
+		mv package.json package.json.original && \
+		mv package-standalone.json package.json && \
+		echo "Standalone backend created at ../nutrition-backend"; \
+		echo "Run 'make standalone-backend-install' to install dependencies"; \
+	else \
+		echo "Directory ../nutrition-backend already exists"; \
+	fi
+
+setup-standalone-frontend:
+	@echo "Setting up standalone frontend..."
+	@if [ ! -d "../nutrition-frontend" ]; then \
+		cp -r packages/frontend ../nutrition-frontend; \
+		cd ../nutrition-frontend && \
+		mv package.json package.json.original && \
+		mv package-standalone.json package.json && \
+		cp env-standalone.example .env && \
+		echo "Standalone frontend created at ../nutrition-frontend"; \
+		echo "Run 'make standalone-frontend-install' to install dependencies"; \
+	else \
+		echo "Directory ../nutrition-frontend already exists"; \
+	fi
+
+standalone-backend-install:
+	@if [ -d "../nutrition-backend" ]; then \
+		echo "Installing standalone backend dependencies..."; \
+		cd ../nutrition-backend && \
+		rm -rf node_modules package-lock.json && \
+		npm install; \
+		echo "Backend dependencies installed!"; \
+		echo "Start with: cd ../nutrition-backend && npm run start:dev"; \
+	else \
+		echo "Standalone backend not found. Run 'make setup-standalone-backend' first"; \
+	fi
+
+standalone-frontend-install:
+	@if [ -d "../nutrition-frontend" ]; then \
+		echo "Installing standalone frontend dependencies..."; \
+		cd ../nutrition-frontend && \
+		rm -rf node_modules package-lock.json .nuxt .output && \
+		npm install; \
+		echo "Frontend dependencies installed!"; \
+		echo "Start with: cd ../nutrition-frontend && npm run dev"; \
+	else \
+		echo "Standalone frontend not found. Run 'make setup-standalone-frontend' first"; \
+	fi
+
 # Testing commands
 test:
 	pnpm run test:backend
@@ -139,6 +197,16 @@ deploy-frontend: docker-frontend-build docker-frontend-up
 clean:
 	rm -rf node_modules packages/*/node_modules packages/*/dist packages/*/.nuxt packages/*/.output
 	docker system prune -f
+
+clean-standalone:
+	@if [ -d "../nutrition-backend" ]; then \
+		echo "Cleaning standalone backend..."; \
+		rm -rf ../nutrition-backend/node_modules ../nutrition-backend/dist; \
+	fi
+	@if [ -d "../nutrition-frontend" ]; then \
+		echo "Cleaning standalone frontend..."; \
+		rm -rf ../nutrition-frontend/node_modules ../nutrition-frontend/.nuxt ../nutrition-frontend/.output; \
+	fi
 
 # Git commands
 git-push:
@@ -185,6 +253,13 @@ health-check-combined:
 	@echo "Checking frontend health..."
 	@curl -f http://localhost:3000 || echo "Frontend not responding"
 
+health-check-standalone:
+	@echo "Checking standalone services..."
+	@echo "Backend (port 3000):"
+	@curl -f http://localhost:3000/health || echo "  Backend not responding"
+	@echo "Frontend (port 3001):"
+	@curl -f http://localhost:3001 || echo "  Frontend not responding"
+
 # Logs
 logs-backend:
 	docker-compose logs -f backend
@@ -196,17 +271,4 @@ logs-backend-separate:
 	docker-compose -f docker-compose.backend.yml logs -f backend
 
 logs-frontend-separate:
-	docker-compose -f docker-compose.frontend.yml logs -f frontend
-
-# Production deployment preparation
-prepare-deploy: clean install build
-	@echo "Project prepared for deployment"
-	@echo "Docker images ready to build"
-
-prepare-deploy-backend: clean install build-backend
-	@echo "Backend prepared for deployment"
-	@echo "Backend Docker image ready to build"
-
-prepare-deploy-frontend: clean install build-frontend
-	@echo "Frontend prepared for deployment"
-	@echo "Frontend Docker image ready to build" 
+	docker-compose -f docker-compose.frontend.yml logs -f frontend 
